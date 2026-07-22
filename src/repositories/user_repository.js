@@ -40,7 +40,7 @@ export const insertUser = async ({ name, email, passwordHash, role }) => {
 // Funcion para seleccionar un usuario por su ID
 export const selectUserById = async (id) => {
   const query = `
-        SELECT ${COLUMNS} FROM ${TABLE_NAME} WHERE id = $1;
+        SELECT ${PUBLIC_COLUMNS} FROM ${TABLE_NAME} WHERE id = $1;
     `;
   const values = [id];
   const result = await executeQuery(query, values);
@@ -51,7 +51,7 @@ export const selectUserById = async (id) => {
 export const selectUserByEmailWithPassword = async (email) => {
   const query = `
     SELECT id, name, email, password_hash, role, created_at
-    FROM ${TABLE}
+    FROM ${TABLE_NAME}
     WHERE email = $1;
   `;
   const rows = await executeQuery(query, [email]);
@@ -60,19 +60,19 @@ export const selectUserByEmailWithPassword = async (email) => {
 
 // Funcion para seleccionar todos los usuarios
 export const selectAllUsers = async (filters = {}, rawPagination = {}) => {
-  const { per, perPage, offset, sort, order } = normalizePagination(
+  const { page, perPage, offset, sort, order } = normalizePagination(
     rawPagination,
     ALLOWED_USER_SORT,
     "created_at",
   );
 
   const conditions = [];
-  const calues = [];
+  const values = [];
   let idx = 1;
 
   if (filters.name) {
     conditions.push(`name ILIKE $${idx++}`);
-    calues.push(`%${filters.name}%`);
+    values.push(`%${filters.name}%`);
   }
 
   const whereClause = conditions.length

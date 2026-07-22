@@ -6,8 +6,8 @@ const ALLOWED_ORDERS = new Set(["asc", "desc"]);
  * */
 export function normalizePagination(
   { page, perPage, sort, order } = {},
-  allweSortColumns,
-  defaultSort = "crated_at",
+  allowedSortColumns = {},
+  defaultSort = "created_at",
 ) {
   const safePage = Number.isInteger(page) && page > 0 ? page : 1;
   const safePerPage =

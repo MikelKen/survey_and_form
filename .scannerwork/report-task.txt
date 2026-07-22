@@ -1,0 +1,6 @@
+projectKey=survey.form.micro.template
+serverUrl=http://18.117.100.66:9000
+serverVersion=26.7.0.124771
+dashboardUrl=http://18.117.100.66:9000/dashboard?id=survey.form.micro.template
+ceTaskId=bcc37455-4647-4c21-b901-a1a3665409fc
+ceTaskUrl=http://18.117.100.66:9000/api/ce/task?id=bcc37455-4647-4c21-b901-a1a3665409fc
