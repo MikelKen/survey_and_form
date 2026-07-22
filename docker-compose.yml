@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: db_survey_form
+    restart: unless-stopped #si el contenedor se cae o si se reinicia la computadora. Docker vuelve a levantarlo automaticamente
+    environment:
+      POSTGRES_DB: ${P_DB_NAME}
+      POSTGRES_USER: ${P_DB_USER}
+      POSTGRES_PASSWORD: ${P_DB_PASSWORD}
+    ports:
+      - "${P_DB_PORT}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${P_DB_USER} -d ${P_DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
