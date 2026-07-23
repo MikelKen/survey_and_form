@@ -59,14 +59,10 @@ pipeline {
             steps {
                 script {
                    echo "Levantando el contenedor de la app en entorno DEV..."
-                    // 1. Obtener la red de Docker Compose si existe, o usar la por defecto
                     sh 'docker network create survey_from_project_default || true'
-
-                    // 2. Detener y remover contenedor previo si existía
                     sh 'docker stop survey-app-dev || true'
                     sh 'docker rm survey-app-dev || true'
 
-                    // 3. Iniciar la app apuntando al contenedor 'db_survey_form'
                     sh '''
                         docker run -d \
                           --name survey-app-dev \
@@ -79,8 +75,8 @@ pipeline {
                           -e DB_PORT=5432 \
                           -e P_DB_USER=postgres \
                           -e DB_USER=postgres \
-                          -e P_DB_PASSWORD=${P_DB_PASSWORD:-postgres} \
-                          -e DB_PASSWORD=${P_DB_PASSWORD:-postgres} \
+                          -e P_DB_PASSWORD=postgres \
+                          -e DB_PASSWORD=postgres \
                           -e P_DB_NAME=survey_db \
                           -e DB_NAME=survey_db \
                           --restart unless-stopped \
