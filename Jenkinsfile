@@ -59,9 +59,11 @@ pipeline {
             steps {
                 script {
                     echo "Levantando el entorno DEV con Docker Compose..."
+                    // Detiene y elimina contenedores anteriores para aplicar el nuevo build
                     sh "docker-compose down || true"
                     sh "docker-compose up -d --build"
                 }
             }
         }
+    }
 }
