@@ -75,10 +75,10 @@ pipeline {
                           -e DB_PORT=5432 \
                           -e P_DB_USER=postgres \
                           -e DB_USER=postgres \
-                          -e P_DB_PASSWORD=postgres \
-                          -e DB_PASSWORD=postgres \
-                          -e P_DB_NAME=survey_db \
-                          -e DB_NAME=survey_db \
+                          -e P_DB_PASSWORD=postgres123 \
+                          -e DB_PASSWORD=postgres123 \
+                          -e P_DB_NAME=mydatabase \
+                          -e DB_NAME=mydatabase \
                           --restart unless-stopped \
                           survey-app:dev
                     '''
