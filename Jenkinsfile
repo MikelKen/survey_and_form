@@ -20,8 +20,13 @@ pipeline {
         steps {
             sh 'node -v'
             sh 'npm -v'
-            sh 'head -20 package-lock.json'
-            sh 'npm ci'
+            // 1. Instalar las dependencias de las librerías locales en tigo/
+            sh 'npm install --prefix tigo/tigo.lib.logger'
+            sh 'npm install --prefix tigo/tigo.lib.errorcodes'
+            sh 'npm install --prefix tigo/tigo.lib.postgres'
+
+            // 2. Instalar y vincular todas las dependencias del proyecto principal
+            sh 'npm install'
         }
     }
 
