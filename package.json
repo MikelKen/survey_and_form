@@ -15,9 +15,9 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@tigo/error-code": "file:./tigo/tigo.lib.errorcodes",
-    "@tigo/logger": "file:./tigo/tigo.lib.logger",
-    "@tigo/postgres-connector": "file:./tigo/tigo.lib.postgres",
+    "@tigo/error-code": "file:tigo/tigo.lib.errorcodes",
+    "@tigo/logger": "file:tigo/tigo.lib.logger",
+    "@tigo/postgres-connector": "file:tigo/tigo.lib.postgres",
     "@vitest/coverage-v8": "^4.1.10",
     "bcrypt": "^6.0.0",
     "body-parser": "^2.3.0",
