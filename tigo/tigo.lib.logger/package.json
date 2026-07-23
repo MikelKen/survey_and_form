@@ -1,0 +1,20 @@
+{
+  "name": "@tigo/logger",
+  "version": "1.0.4",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run tests",
+    "coverage": "vitest run --coverage tests"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "pino": "^10.3.1"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^4.1.10",
+    "vitest": "^4.1.10"
+  }
+}
