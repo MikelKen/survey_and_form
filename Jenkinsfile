@@ -7,6 +7,7 @@ pipeline {
 
     environment {
         SCANNER_HOME = tool 'SonarScanner'
+        IMAGE_NAME   = 'survey-app:dev'
     }
 
     stages {
@@ -18,7 +19,6 @@ pipeline {
 
     stage('Install dependencies') {
         steps {
-            // sh 'node -v'
             sh 'npm -v'
             sh 'npm install --install-links'
         }
@@ -42,6 +42,26 @@ pipeline {
             steps {
                 timeout(time: 5, unit: 'MINUTES') {
                     waitForQualityGate abortPipeline: true
+                }
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    echo "Construyendo la imagen Docker ${IMAGE_NAME}..."
+                    sh "docker build --no-cache -t ${IMAGE_NAME} ."
+                }
+            }
+        }
+
+        stage('Deploy Local DEV') {
+            steps {
+                script {
+                    echo "Levantando el entorno DEV con Docker Compose..."
+                    // Detiene y elimina contenedores anteriores para aplicar el nuevo build
+                    sh "docker compose down"
+                    sh "docker compose up -d --build"
                 }
             }
         }
