@@ -1,0 +1,155 @@
+pipeline {
+    agent any
+
+    tools {
+        nodejs 'nodejs-22' // Configurado en Jenkins > Tools
+    }
+
+    parameters {
+        booleanParam(name: 'SONAR', defaultValue: false, description: 'Ejecutar análisis de código SonarQube?')
+        booleanParam(name: 'COVERAGE', defaultValue: false, description: 'Ejecutar pruebas unitarias para covertura?')
+
+        string(name: 'VERSION', defaultValue: '0.0.13', description: 'Version de la libreria (Obligatorio): ej. 0.0.1')
+
+        string(name: 'REGISTRY', defaultValue: 'verdaccio', description: 'Registry de librerias (Obligatorio): [verdaccio]')
+        booleanParam(name: 'PUBLISH', defaultValue: false, description: 'Publicar libreria a registry?')
+
+    }
+
+    environment {
+        // Variables de entorno personalizadas
+        TYPE = 'nodejs'
+        SONAR = "${params.SONAR}"
+        COVERAGE = "${params.COVERAGE}"
+        VERSION = "${params.VERSION}"
+        REGISTRY = "${params.REGISTRY}"
+        PUBLISH = "${params.PUBLISH}"
+
+        // project
+        APP_KEY = 'tigo-postgres-connector'
+        APP_NAME = '@tigo/postgres-connector'
+
+        SONARQUBE_ENV = 'SonarQubeTigo'
+
+        VERDACCIO_REGISTRY = 'https://verdaccio.tigo.net.bo'
+        VERDACCIO_CREDENTIALS_ID = 'verdaccio-token'
+
+        HTTP_PROXY = 'http://oracleapigw.tigo.net.bo:1522'
+        HTTPS_PROXY = 'http://oracleapigw.tigo.net.bo:1522'
+        NO_PROXY = "verdaccio.tigo.net.bo,172.28.66.194"
+    }
+
+    stages {
+
+        stage(' 1️⃣ Registry Configuration') {
+            steps {
+                script {
+                    echo "📌 Proyecto: ${APP_NAME}"
+                    echo "📌 Tipo: ${TYPE}"
+                    echo "📌 Registry: ${REGISTRY}"
+                }
+            }
+        }
+
+        stage('2️⃣ Install Dependencies') {
+            when {
+                expression { SONAR == 'true' }
+            }
+            steps {
+                withCredentials([string(credentialsId: VERDACCIO_CREDENTIALS_ID, variable: 'NPM_TOKEN')]) {
+                    script {
+                        echo "📦 Instalando dependencias de Node.js"
+                    }
+                    writeFile file: '.npmrc', 
+                    text: """
+                        @tigo:registry=${VERDACCIO_REGISTRY}
+                        //${VERDACCIO_REGISTRY.replace("https://", "")}/:_authToken=${NPM_TOKEN}
+                        always-auth=true
+                        strict-ssl=false
+                        no-proxy=${NO_PROXY}
+                    """
+                    sh 'cat .npmrc' // eliminar después de la prueba
+                    sh 'npm install --verbose --no-audit --no-fund' // eliminar --verbose después de la prueba
+                    sh 'ls -al' // eliminar después de la prueba
+                }
+            }
+        }
+
+        stage('3️⃣ Test & Coverage') {
+            when {
+                expression { SONAR == 'true' && COVERAGE == 'true' }
+            }
+            steps {
+                sh 'npm run coverage'
+            }
+        }
+
+        stage('4️⃣ SonarQube Analysis') {
+            when {
+                expression { SONAR == 'true' }
+            }
+            steps {
+                script {
+                    def scannerHome = tool 'sonar-scanner'
+                    withSonarQubeEnv("${SONARQUBE_ENV}") {
+                        sh """
+                            ${scannerHome}/bin/sonar-scanner \
+                                -Dsonar.projectKey=${APP_KEY} \
+                                -Dsonar.projectName=${APP_NAME} \
+                                -Dsonar.projectVersion=${VERSION} \
+                                -Dsonar.host.url=${SONAR_HOST_URL}
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('5️⃣ Quality Gate') {
+            when {
+                expression { SONAR == 'true' && COVERAGE == 'true' }
+            }
+            steps {
+                timeout(time: 5, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
+                }
+            }
+        }
+
+        stage('6️⃣ Publish to Registry') {
+            when {
+                expression { PUBLISH == 'true' }
+            }
+            steps {
+                withCredentials([string(credentialsId: VERDACCIO_CREDENTIALS_ID, variable: 'NPM_TOKEN')]) {
+                    script {
+                        echo "📦 Publicando librería ${APP_NAME} a ${REGISTRY}"
+                    }
+                    writeFile file: '.npmrc', 
+                    text: """
+                        @tigo:registry=${VERDACCIO_REGISTRY}
+                        //${VERDACCIO_REGISTRY.replace("https://", "")}/:_authToken=${NPM_TOKEN}
+                        always-auth=true
+                        strict-ssl=false
+                        no-proxy=${NO_PROXY}
+                    """
+                    sh 'cat .npmrc' // eliminar después de la prueba
+                    sh 'npm publish --access public --verbose --no-audit --no-fund' // eliminar --verbose después de la prueba
+                }
+            }
+        }
+
+    }
+
+    post {
+        always {
+            echo '🧹 Limpiando workspace.'
+            cleanWs()
+        }
+        success {
+            echo '✅ Pipeline ejecutado con éxito'
+        }
+        failure {
+            echo '❌ Falló el pipeline'
+        }
+    }
+}

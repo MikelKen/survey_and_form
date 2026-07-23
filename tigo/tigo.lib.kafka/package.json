@@ -1,0 +1,32 @@
+{
+  "name": "@tigo/kafka-connector",
+  "version": "2.1.8",
+  "description": "Kafka connector",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "start": "node src/index.js",
+    "dev": "node --env-file=test.env src/index.js",
+    "coverage": "vitest run --coverage"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://gitlab.tigo.net.bo/channel/npm-libs/tigo.lib.kafka.git"
+  },
+  "keywords": [
+    "kafka-connector"
+  ],
+  "author": "penama",
+  "license": "ISC",
+  "dependencies": {
+    "@tigo/logger": "file:../tigo.lib.logger",
+    "dotenv": "17.3.1",
+    "kafkajs": "^2.2.4"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^4.0.7",
+    "node-mocks-http": "^1.17.2",
+    "vitest": "^4.0.7"
+  }
+}

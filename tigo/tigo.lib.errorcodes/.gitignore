@@ -1,0 +1,34 @@
+# Node.js
+node_modules/
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+
+# Dependencias del sistema operativo
+.DS_Store
+Thumbs.db
+
+# Archivos de entorno
+.env
+.env.local
+.env.*.local
+
+# Directorios de producción
+build/
+dist/
+out/
+
+# Archivos de configuración de IDEs/editores
+.idea/
+.vscode/
+
+# Archivos de logs
+logs/
+*.log
+
+# Archivos de covertura de codigo
+coverage
+.nyc_output
+.scannerwork
+
+.npmrc

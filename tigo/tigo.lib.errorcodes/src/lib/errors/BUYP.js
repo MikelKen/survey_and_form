@@ -1,0 +1,17 @@
+export default {
+  BUYP0001: "Payload validation failed or request is malformed",
+  BUYP0002: "Missing Authorization header or token is invalid",
+  BUYP0003: "Token is valid but does not grant sufficient permissions for this resource",
+  BUYP0004: "Unexpected server error",
+  BUYP0005: "Service is temporarily unavailable (maintenance, overload, etc.)",
+  BUYP0006: "The line does not correspond to a Tigo number.",
+  BUYP0007: "Catalog not found.",
+  BUYP0008: "Available promos not found.",
+  BUYP0009: "Transaction not completed. Please try again.",
+  BUYP0010: "Amount not available.",
+  BUYP0011: "Mobile not found.",
+  BUYP0012: "Payment method not found.",
+  BUYP0013: "channel&subchannel not configured.",
+  BUYP0014: "The request is invalid. Please check the submitted data.",
+  BUYP0015: "Access token not found.",
+}
