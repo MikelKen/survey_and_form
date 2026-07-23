@@ -18,11 +18,9 @@ pipeline {
 
     stage('Install dependencies') {
         steps {
-            sh 'which node'
-            sh 'which npm'
             sh 'node -v'
             sh 'npm -v'
-            sh 'ls -la'
+            sh 'head -20 package-lock.json'
             sh 'npm ci'
         }
     }
