@@ -16,11 +16,16 @@ pipeline {
             }
         }
 
-        stage('Install dependencies') {
-            steps {
-                sh 'npm ci'
-            }
+    stage('Install dependencies') {
+        steps {
+            sh 'which node'
+            sh 'which npm'
+            sh 'node -v'
+            sh 'npm -v'
+            sh 'ls -la'
+            sh 'npm ci'
         }
+    }
 
         stage('Run tests + coverage') {
             steps {
