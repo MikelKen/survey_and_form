@@ -6,7 +6,7 @@ const app = ultimateExpress();
 app.use(ultimateExpress.json());
 
 app.get("/", (req, res) => {
-  res.status(200).send("Welcome Surver From");
+  res.status(200).send("Welcome Surver From Project");
 });
 
 app.use("/api/v1", routes);
