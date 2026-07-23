@@ -1,3 +1,10 @@
-/node_modules
-/node_modules.*
+node_modules
+npm-debug.log
+coverage
+trivy-report.json
+.git
+.gitignore
+README.md
+zap_report.html
+zap.yaml
 .env

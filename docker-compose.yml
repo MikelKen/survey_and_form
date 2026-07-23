@@ -1,21 +1,58 @@
+version: "3.8"
+
 services:
   postgres:
     image: postgres:16-alpine
     container_name: db_survey_form
-    restart: unless-stopped #si el contenedor se cae o si se reinicia la computadora. Docker vuelve a levantarlo automaticamente
+    restart: unless-stopped
     environment:
-      POSTGRES_DB: ${P_DB_NAME}
-      POSTGRES_USER: ${P_DB_USER}
-      POSTGRES_PASSWORD: ${P_DB_PASSWORD}
+      # Nombres exactos requeridos por la imagen oficial de PostgreSQL
+      POSTGRES_DB: ${P_DB_NAME:-survey_db}
+      POSTGRES_USER: ${P_DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${P_DB_PASSWORD:-postgres}
     ports:
-      - "${P_DB_PORT}:5432"
+      - "${P_DB_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${P_DB_USER} -d ${P_DB_NAME}"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${P_DB_USER:-postgres} -d ${P_DB_NAME:-survey_db}",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
+
+  survey-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: survey-app-dev
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      # Se usa 'postgres' (nombre del servicio) como HOST
+      P_DB_HOST: postgres
+      P_POSTGRES_HOST: postgres
+      DB_HOST: postgres
+      POSTGRES_HOST: postgres
+
+      P_DB_PORT: 5432
+      DB_PORT: 5432
+
+      P_DB_USER: ${P_DB_USER:-postgres}
+      DB_USER: ${P_DB_USER:-postgres}
+
+      P_DB_PASSWORD: ${P_DB_PASSWORD:-postgres}
+      DB_PASSWORD: ${P_DB_PASSWORD:-postgres}
+
+      P_DB_NAME: ${P_DB_NAME:-survey_db}
+      DB_NAME: ${P_DB_NAME:-survey_db}
+    depends_on:
+      postgres:
+        condition: service_healthy
 
 volumes:
   postgres_data:
