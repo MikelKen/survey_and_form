@@ -13,6 +13,8 @@ export default defineConfig({
         "eslint.config.js",
         "src/utils/config.js",
         "src/utils/constants.js",
+        "**/tigo/**",
+        "**/node_modules/**",
       ],
     },
   },
