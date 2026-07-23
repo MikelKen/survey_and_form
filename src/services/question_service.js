@@ -126,7 +126,7 @@ export const updateQuestionService = async (payload) => {
 
   // 2. Verificar estado del formulario padre
   const form = await selectFormById(existingQuestion.form_id);
-  if (!form || form.state !== "DRAFT") {
+  if (form?.state !== "DRAFT") {
     throw setError(
       "No se puede editar una pregunta de un formulario publicado",
       errorCodes.CONFLICT,
@@ -164,7 +164,7 @@ export const deleteQuestionService = async (payload) => {
 
   // 2. Verificar estado del formulario padre
   const form = await selectFormById(existingQuestion.form_id);
-  if (!form || form.state !== "DRAFT") {
+  if (form?.state !== "DRAFT") {
     throw setError(
       "No se puede eliminar una pregunta de un formulario publicado",
       errorCodes.CONFLICT,

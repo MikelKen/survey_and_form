@@ -56,6 +56,7 @@ const validate = (schema) => (req, res, next) => {
     req.validated = result.data;
     next();
   } catch (error) {
+    logger.error({ validateRequestMiddleware: { error: error.message } });
     const { statusHttp, response } = sendError(constants.errors.BAD_REQUEST);
     res.status(statusHttp).json(response);
   }

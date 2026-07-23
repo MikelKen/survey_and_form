@@ -2,7 +2,6 @@ import bcrypt from "bcrypt";
 import { logger } from "@tigo/logger";
 import { errorCodes, setError } from "../utils/errorCodes.js";
 import {
-  createUserSchema,
   loginUserSchema,
   listUsersFilterSchema,
   userIdParamSchema,

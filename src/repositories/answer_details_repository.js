@@ -3,12 +3,10 @@ import { executeQuery } from "@tigo/postgres-connector";
 /**
  * Capa de acceso a datos del recurso Answer Details (detalle de respuestas)
  */
-
 const TABLE_NAME = "answer_details";
+const PUBLIC_COLUMNS = "id, submission_id, question_id, value";
 
-const PUBLIC_COLUMNS = `id, submission_id, question_id, value`;
-
-// Funcion para insertar TODAS las respuestas de un envio de una sola vez.
+// Función para insertar TODAS las respuestas de un envío de una sola vez.
 export const insertAnswerDetailsBulk = async (submissionId, details) => {
   if (!details?.length) return [];
 
@@ -27,16 +25,15 @@ export const insertAnswerDetailsBulk = async (submissionId, details) => {
   return await executeQuery(query, values);
 };
 
-// Funcion para traer el detalle completo de un envio puntual
+// Función para traer el detalle completo de un envío puntual
 export const selectDetailsBySubmission = async (submissionId) => {
   const query = `
     SELECT ${PUBLIC_COLUMNS} FROM ${TABLE_NAME} WHERE submission_id = $1;
   `;
-  const rows = await executeQuery(query, [submissionId]);
-  return rows;
+  return await executeQuery(query, [submissionId]);
 };
 
-// Funcion para traer el conteo de respuestas por pregunta en un formulario (Consultar resultados).
+// Función para traer el conteo de respuestas por pregunta en un formulario
 export const selectRawAggregationByForm = async (formId) => {
   const query = `
     SELECT
@@ -52,12 +49,11 @@ export const selectRawAggregationByForm = async (formId) => {
     GROUP BY q.id, q.question_text, q.type, q.order_index, ad.value
     ORDER BY q.order_index ASC, value_count DESC;
   `;
-  const rows = await executeQuery(query, [formId]);
-  return rows;
+  return await executeQuery(query, [formId]);
 };
 
-// Funcion helper para transformar las filas "crudas" de arriba en un reporte legible por pregunta.
-export const buildResultsReport = (rawRows) => {
+// Helper para transformar las filas crudas en reporte por pregunta
+export const buildResultsReport = (rawRows = []) => {
   const questionsMap = new Map();
 
   for (const row of rawRows) {
@@ -73,20 +69,25 @@ export const buildResultsReport = (rawRows) => {
 
     const entry = questionsMap.get(row.question_id);
 
-    // Si no hay respuestas, ad.value viene NULL por el LEFT JOIN
-    if (row.value === null) continue;
-
-    const count = Number(row.value_count);
-    entry.totalResponses += count;
-    entry.distribution[row.value] = count;
+    if (row.value !== null && row.value !== undefined) {
+      const count = Number(row.value_count) || 0;
+      entry.totalResponses += count;
+      entry.distribution[row.value] = count;
+    }
   }
 
   const results = Array.from(questionsMap.values());
 
-  // Para preguntas NUMBER, se calcula el promedio/min/max a partir del
-  // mismo distribution (valor -> cantidad), sin ir de nuevo a la base.
+  // Cálculo de agregaciones para tipo NUMBER
   for (const entry of results) {
-    if (entry.type !== "NUMBER") continue;
+    if (entry.type !== "NUMBER" || entry.totalResponses === 0) {
+      if (entry.type === "NUMBER") {
+        entry.average = null;
+        entry.min = null;
+        entry.max = null;
+      }
+      continue;
+    }
 
     let sum = 0;
     let min = Infinity;
@@ -99,10 +100,9 @@ export const buildResultsReport = (rawRows) => {
       max = Math.max(max, numericValue);
     }
 
-    entry.average =
-      entry.totalResponses > 0 ? sum / entry.totalResponses : null;
-    entry.min = entry.totalResponses > 0 ? min : null;
-    entry.max = entry.totalResponses > 0 ? max : null;
+    entry.average = sum / entry.totalResponses;
+    entry.min = min;
+    entry.max = max;
   }
 
   return results;

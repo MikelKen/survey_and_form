@@ -25,6 +25,9 @@ export const errorCodes = {
   GATEWAY_OR_PROXY_ERROR: "BG001",
   SERVICE_TEMPORARILY_UNAVAILABLE: "SU001",
   TIMEOUT_WAITING_FOR_UPSTREAM_SERVICE: "GT001",
+  VALIDATION: "BR002", // -> 400 Invalid data type
+  CONFLICT: "CF001", // -> 409 Resource conflict
+  UNKNOWN: "SE001", // -> 500 Generic internal server error
 };
 
 export const setError = (message, errorCode) => {
