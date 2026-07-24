@@ -63,16 +63,28 @@ pipeline {
                     sh 'docker stop survey-app-dev || true'
                     sh 'docker rm survey-app-dev || true'
 
-                    // Carga directamente el archivo .env de tu máquina en el contenedor
+                    // 1. Crear el archivo .env con tus credenciales reales
+                    sh '''
+                        cat <<EOF > .env
+                        PORT=3000
+                        API_BASE_PATH=/v1
+                        P_DB_HOST=db_survey_form
+                        P_DB_PORT=5432
+                        P_DB_NAME=mydatabase
+                        P_DB_USER=postgres
+                        P_DB_PASSWORD=postgres123
+                        P_DB_MAX_CONNECTIONS=10
+                        JWT_SECRET=burveyform
+                        EOF
+                    '''
+
+                    // 2. Levantar el contenedor cargando el .env generado
                     sh '''
                         docker run -d \
                           --name survey-app-dev \
                           --network survey_from_project_default \
                           --env-file .env \
                           -p 3000:3000 \
-                          -e P_DB_HOST=db_survey_form \
-                          -e POSTGRES_HOST=db_survey_form \
-                          -e DB_HOST=db_survey_form \
                           --restart unless-stopped \
                           survey-app:dev
                     '''
