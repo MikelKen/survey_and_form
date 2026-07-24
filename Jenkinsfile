@@ -106,4 +106,10 @@ pipeline {
             }
         }
     }
+    
+    post {
+        always {
+            archiveArtifacts artifacts: 'trivy-report.json', allowEmptyArchive: true
+        }
+    }
 }
