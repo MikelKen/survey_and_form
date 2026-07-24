@@ -58,27 +58,21 @@ pipeline {
         stage('Deploy Local DEV') {
             steps {
                 script {
-                   echo "Levantando el contenedor de la app en entorno DEV..."
+                    echo "Levantando el contenedor de la app en entorno DEV..."
                     sh 'docker network create survey_from_project_default || true'
                     sh 'docker stop survey-app-dev || true'
                     sh 'docker rm survey-app-dev || true'
 
+                    // Carga directamente el archivo .env de tu máquina en el contenedor
                     sh '''
                         docker run -d \
                           --name survey-app-dev \
                           --network survey_from_project_default \
+                          --env-file .env \
                           -p 3000:3000 \
                           -e P_DB_HOST=db_survey_form \
                           -e POSTGRES_HOST=db_survey_form \
                           -e DB_HOST=db_survey_form \
-                          -e P_DB_PORT=5432 \
-                          -e DB_PORT=5432 \
-                          -e P_DB_USER=postgres \
-                          -e DB_USER=postgres \
-                          -e P_DB_PASSWORD=postgres123 \
-                          -e DB_PASSWORD=postgres123 \
-                          -e P_DB_NAME=mydatabase \
-                          -e DB_NAME=mydatabase \
                           --restart unless-stopped \
                           survey-app:dev
                     '''
