@@ -25,6 +25,7 @@ services:
   jenkins:
     image: jenkins/jenkins:lts
     container_name: jenkins
+    user: root
     restart: unless-stopped
     dns:
       - 8.8.8.8
