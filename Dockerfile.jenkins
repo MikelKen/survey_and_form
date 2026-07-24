@@ -9,5 +9,5 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# Volver al usuario jenkins por seguridad (opcional, pero buena práctica)
-# USER jenkins
+# 2. Instalar el binario oficial de Trivy
+RUN curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
