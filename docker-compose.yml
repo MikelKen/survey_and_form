@@ -23,7 +23,9 @@ services:
 
   #Servidor Jenkins
   jenkins:
-    image: jenkins/jenkins:lts
+    build:
+      context: .
+      dockerfile: Dockerfile.jenkins
     container_name: jenkins
     user: root
     restart: unless-stopped
