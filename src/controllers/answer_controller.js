@@ -8,7 +8,7 @@ import {
 } from "../services/answer_service.js";
 
 /**
- * Registrar envío de respuestas a un formulario
+ * Registrar envío de respuestas a un formulario publicado
  */
 export async function submitAnswersController(req, res) {
   let responseBody = {};

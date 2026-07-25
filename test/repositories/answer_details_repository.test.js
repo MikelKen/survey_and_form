@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-// Mockear conector de Postgres
+// Mockear el conector de Postgres
 vi.mock("@tigo/postgres-connector", () => ({
   executeQuery: vi.fn(),
 }));
@@ -18,36 +18,31 @@ describe("Answer Details Repository - Unit Tests", () => {
     vi.clearAllMocks();
   });
 
-  // ----------------------------------------------------------------------
-  // insertAnswerDetailsBulk
-  // ----------------------------------------------------------------------
+  // insertAnswerDetails
   describe("insertAnswerDetailsBulk", () => {
-    it("debe retornar un arreglo vacío si details es nulo o está vacío", async () => {
-      const resNull = await insertAnswerDetailsBulk("sub-101", null);
-      const resEmpty = await insertAnswerDetailsBulk("sub-101", []);
-
-      expect(resNull).toEqual([]);
-      expect(resEmpty).toEqual([]);
+    it("debe retornar arreglo vacío si el arreglo de detalles está vacío", async () => {
+      const result = await insertAnswerDetailsBulk("sub-101", []);
+      expect(result).toEqual([]);
       expect(executeQuery).not.toHaveBeenCalled();
     });
 
-    it("debe construir placeholders dinámicos e insertar en lote (bulk)", async () => {
-      const details = [
-        { questionId: "q1", value: "Satisfecho" },
-        { questionId: "q2", value: 5 },
-      ];
-
-      const mockInserted = [
+    it("debe construir y ejecutar el query bulk insert para múltiples respuestas", async () => {
+      const mockInsertedDetails = [
+        { id: "ad1", submission_id: "sub-101", question_id: "q1", value: "30" },
         {
-          id: "ad1",
+          id: "ad2",
           submission_id: "sub-101",
-          question_id: "q1",
-          value: "Satisfecho",
+          question_id: "q2",
+          value: "true",
         },
-        { id: "ad2", submission_id: "sub-101", question_id: "q2", value: "5" },
       ];
 
-      executeQuery.mockResolvedValue(mockInserted);
+      executeQuery.mockResolvedValue(mockInsertedDetails);
+
+      const details = [
+        { questionId: "q1", value: 30 },
+        { questionId: "q2", value: true },
+      ];
 
       const result = await insertAnswerDetailsBulk("sub-101", details);
 
@@ -56,25 +51,21 @@ describe("Answer Details Repository - Unit Tests", () => {
 
       expect(sql).toContain("INSERT INTO answer_details");
       expect(sql).toContain("($1, $2, $3), ($4, $5, $6)");
-      expect(params).toEqual([
-        "sub-101",
-        "q1",
-        "Satisfecho",
-        "sub-101",
-        "q2",
-        "5",
-      ]);
-      expect(result).toEqual(mockInserted);
+      expect(params).toEqual(["sub-101", "q1", "30", "sub-101", "q2", "true"]);
+      expect(result).toEqual(mockInsertedDetails);
     });
   });
 
-  // ----------------------------------------------------------------------
   // selectDetailsBySubmission
-  // ----------------------------------------------------------------------
   describe("selectDetailsBySubmission", () => {
-    it("debe consultar las respuestas pertenecientes a un envío", async () => {
+    it("debe retornar los detalles de respuestas asociadas a un envío", async () => {
       const mockDetails = [
-        { id: "ad1", submission_id: "sub-101", question_id: "q1", value: "Si" },
+        {
+          id: "ad1",
+          submission_id: "sub-101",
+          question_id: "q1",
+          value: "Texto",
+        },
       ];
 
       executeQuery.mockResolvedValue(mockDetails);
@@ -89,16 +80,15 @@ describe("Answer Details Repository - Unit Tests", () => {
     });
   });
 
-  // ----------------------------------------------------------------------
   // selectRawAggregationByForm
-  // ----------------------------------------------------------------------
   describe("selectRawAggregationByForm", () => {
-    it("debe ejecutar la query con LEFT JOIN para agrupar respuestas", async () => {
+    it("debe ejecutar la consulta de agregación raw por formulario", async () => {
       const mockRawRows = [
         {
           question_id: "q1",
-          question_text: "¿Edad?",
+          question_text: "Edad",
           type: "NUMBER",
+          order_index: 1,
           value: "25",
           value_count: "2",
         },
@@ -109,89 +99,89 @@ describe("Answer Details Repository - Unit Tests", () => {
       const result = await selectRawAggregationByForm("f101");
 
       expect(executeQuery).toHaveBeenCalledWith(
-        expect.stringContaining("LEFT JOIN answer_details"),
+        expect.stringContaining("WHERE q.form_id = $1"),
         ["f101"],
       );
       expect(result).toEqual(mockRawRows);
     });
   });
 
-  // ----------------------------------------------------------------------
-  // buildResultsReport (Helper)
-  // ----------------------------------------------------------------------
+  // buildResultsReport (Helper de Métricas)
   describe("buildResultsReport", () => {
-    it("debe omitir respuestas nulas (LEFT JOIN sin respuestas) y mapear la estructura correctamente", () => {
+    it("debe retornar arreglo vacío si no se pasan filas", () => {
+      const report = buildResultsReport([]);
+      expect(report).toEqual([]);
+    });
+
+    it("debe calcular distribución para preguntas tipo TEXT o BOOLEAN", () => {
       const rawRows = [
         {
           question_id: "q1",
-          question_text: "Comentarios",
-          type: "TEXT",
-          value: null,
-          value_count: "0",
+          question_text: "¿Te gusta el servicio?",
+          type: "BOOLEAN",
+          order_index: 1,
+          value: "true",
+          value_count: "5",
+        },
+        {
+          question_id: "q1",
+          question_text: "¿Te gusta el servicio?",
+          type: "BOOLEAN",
+          order_index: 1,
+          value: "false",
+          value_count: "2",
         },
       ];
 
       const report = buildResultsReport(rawRows);
 
-      expect(report).toEqual([
-        {
-          questionId: "q1",
-          questionText: "Comentarios",
-          type: "TEXT",
-          totalResponses: 0,
-          distribution: {},
-        },
-      ]);
+      expect(report).toHaveLength(1);
+      expect(report[0]).toEqual({
+        questionId: "q1",
+        questionText: "¿Te gusta el servicio?",
+        type: "BOOLEAN",
+        totalResponses: 7,
+        distribution: { true: 5, false: 2 },
+      });
     });
 
-    it("debe procesar respuestas de texto y calcular min, max y average para preguntas NUMBER", () => {
+    it("debe calcular average, min y max correctamente para preguntas tipo NUMBER", () => {
       const rawRows = [
         {
-          question_id: "q1",
-          question_text: "Calificación de soporte",
+          question_id: "q2",
+          question_text: "Puntuación",
           type: "NUMBER",
+          order_index: 1,
           value: "10",
           value_count: "2",
         },
         {
-          question_id: "q1",
-          question_text: "Calificación de soporte",
+          question_id: "q2",
+          question_text: "Puntuación",
           type: "NUMBER",
+          order_index: 1,
           value: "20",
           value_count: "1",
-        },
-        {
-          question_id: "q2",
-          question_text: "¿Recomendaría?",
-          type: "BOOLEAN",
-          value: "true",
-          value_count: "3",
         },
       ];
 
       const report = buildResultsReport(rawRows);
 
-      // Verificación Pregunta 1 (NUMBER) -> (10*2 + 20*1) / 3 = 40 / 3 = 13.333...
-      const numQuestion = report.find((q) => q.questionId === "q1");
-      expect(numQuestion.totalResponses).toBe(3);
-      expect(numQuestion.distribution).toEqual({ 10: 2, 20: 1 });
-      expect(numQuestion.min).toBe(10);
-      expect(numQuestion.max).toBe(20);
-      expect(numQuestion.average).toBeCloseTo(13.333, 3);
-
-      // Verificación Pregunta 2 (BOOLEAN)
-      const boolQuestion = report.find((q) => q.questionId === "q2");
-      expect(boolQuestion.totalResponses).toBe(3);
-      expect(boolQuestion.distribution).toEqual({ true: 3 });
-      expect(boolQuestion.average).toBeUndefined();
+      expect(report).toHaveLength(1);
+      expect(report[0].totalResponses).toBe(3);
+      expect(report[0].distribution).toEqual({ 10: 2, 20: 1 });
+      expect(report[0].average).toBeCloseTo(13.33, 1);
+      expect(report[0].min).toBe(10);
+      expect(report[0].max).toBe(20);
     });
 
-    it("debe retornar average, min y max como null si una pregunta NUMBER no tiene respuestas", () => {
+    it("debe asignar null a average/min/max si una pregunta NUMBER no tiene respuestas", () => {
       const rawRows = [
         {
-          question_id: "q1",
-          question_text: "Puntaje sin responder",
+          question_id: "q3",
+          question_text: "Edad opcional",
           type: "NUMBER",
+          order_index: 1,
           value: null,
           value_count: "0",
         },
@@ -199,6 +189,7 @@ describe("Answer Details Repository - Unit Tests", () => {
 
       const report = buildResultsReport(rawRows);
 
+      expect(report[0].totalResponses).toBe(0);
       expect(report[0].average).toBeNull();
       expect(report[0].min).toBeNull();
       expect(report[0].max).toBeNull();

@@ -36,9 +36,6 @@ describe("Answer Repository - Unit Tests", () => {
     vi.clearAllMocks();
   });
 
-  // ----------------------------------------------------------------------
-  // insertSubmission
-  // ----------------------------------------------------------------------
   describe("insertSubmission", () => {
     it("debe insertar una cabecera de envío correctamente", async () => {
       const mockSubmission = {
@@ -60,9 +57,6 @@ describe("Answer Repository - Unit Tests", () => {
     });
   });
 
-  // ----------------------------------------------------------------------
-  // selectSubmissionById
-  // ----------------------------------------------------------------------
   describe("selectSubmissionById", () => {
     it("debe retornar la cabecera de un envío por su ID", async () => {
       const mockSubmission = {
@@ -91,9 +85,6 @@ describe("Answer Repository - Unit Tests", () => {
     });
   });
 
-  // ----------------------------------------------------------------------
-  // selectSubmissionsByForm
-  // ----------------------------------------------------------------------
   describe("selectSubmissionsByForm", () => {
     it("debe retornar los envíos paginados de un formulario", async () => {
       const mockRows = [{ id: "sub-1", form_id: "f101" }];
@@ -124,9 +115,6 @@ describe("Answer Repository - Unit Tests", () => {
     });
   });
 
-  // ----------------------------------------------------------------------
-  // countSubmissionsByForm
-  // ----------------------------------------------------------------------
   describe("countSubmissionsByForm", () => {
     it("debe retornar la cantidad de envíos como un número entero", async () => {
       executeQuery.mockResolvedValue([{ total: "5" }]);

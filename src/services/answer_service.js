@@ -1,11 +1,6 @@
 import { logger } from "@tigo/logger";
 import { errorCodes, setError } from "../utils/errorCodes.js";
 import {
-  submitAnswersSchema,
-  formIdParamSchema,
-  listSubmissionsQuerySchema,
-} from "../schemas/answer_schema.js";
-import {
   insertSubmission,
   selectSubmissionById,
   selectSubmissionsByForm,
@@ -18,19 +13,9 @@ import {
 } from "../repositories/answer_details_repository.js";
 import { selectFormStateById } from "../repositories/form_repository.js";
 import { selectQuestionsByFormId } from "../repositories/question_repository.js";
+import { getCall, setCall } from "@tigo/redis-connector";
 
-const parseOrThrow = (schema, payload) => {
-  const result = schema.safeParse(payload);
-
-  if (!result.success) {
-    const details = result.error.issues
-      .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
-      .join(" | ");
-    throw setError(`Payload invalido: ${details}`, errorCodes.VALIDATION);
-  }
-
-  return result.data;
-};
+const RESULTS_CACHE_TTL = 60;
 
 /**
  * Valida que todas las preguntas requeridas tengan respuesta
@@ -115,12 +100,11 @@ const validateAnswersLogic = (questions, answers) => {
   validateRequiredQuestions(questions, submittedAnswersMap);
   validateAnswerTypes(questionsMap, answers);
 };
-/**
- * Función para Recepción, Validación Estricta y Persistencia de Respuestas
- */
-export const submitAnswersService = async (payload) => {
-  const data = parseOrThrow(submitAnswersSchema, payload);
 
+/**
+ * Recepción, Validación Estricta y Persistencia de Respuestas
+ */
+export const submitAnswersService = async (data) => {
   logger.info({ submitAnswersService: { "[FORM_ID]": data.form_id } });
 
   const form = await selectFormStateById(data.form_id);
@@ -160,11 +144,28 @@ export const submitAnswersService = async (payload) => {
   }
 };
 
-export const getFormResultsService = async (payload) => {
-  const data = parseOrThrow(formIdParamSchema, payload);
-
+/**
+ * Servicio para consultar resultados estadísticos agregados con Caché Redis
+ */
+export const getFormResultsService = async (data) => {
   logger.info({ getFormResultsService: { "[FORM_ID]": data.form_id } });
 
+  const cacheKey = `results:${data.form_id}`;
+
+  // 1. Intentar consultar en Redis
+  try {
+    const cachedResults = await getCall(cacheKey);
+    if (cachedResults) {
+      logger.info({ "[REDIS CACHE HIT RESULTS]": cacheKey });
+      return typeof cachedResults === "string"
+        ? JSON.parse(cachedResults)
+        : cachedResults;
+    }
+  } catch (err) {
+    logger.error({ "[REDIS GET ERROR]": err.message });
+  }
+
+  // 2. Verificar existencia del formulario
   const form = await selectFormStateById(data.form_id);
   if (!form) {
     throw setError(
@@ -173,18 +174,29 @@ export const getFormResultsService = async (payload) => {
     );
   }
 
+  // 3. Procesar datos agregados desde PostgreSQL
   const rawRows = await selectRawAggregationByForm(data.form_id);
   const report = buildResultsReport(rawRows);
 
-  return {
+  const responsePayload = {
     formId: data.form_id,
     questions: report,
   };
+
+  // 4. Almacenar en Redis
+  try {
+    await setCall(cacheKey, responsePayload, RESULTS_CACHE_TTL);
+  } catch (err) {
+    logger.error({ "[REDIS SET ERROR]": err.message });
+  }
+
+  return responsePayload;
 };
 
-export const listSubmissionsByFormService = async (payload) => {
-  const data = parseOrThrow(listSubmissionsQuerySchema, payload);
-
+/**
+ * Servicio para listar envíos paginados
+ */
+export const listSubmissionsByFormService = async (data) => {
   logger.info({ listSubmissionsByFormService: { "[FORM_ID]": data.form_id } });
 
   const form = await selectFormStateById(data.form_id);
@@ -201,9 +213,10 @@ export const listSubmissionsByFormService = async (payload) => {
   });
 };
 
-export const getSubmissionDetailService = async (payload) => {
-  const data = parseOrThrow(formIdParamSchema, payload);
-
+/**
+ * Servicio para obtener el detalle de un envío puntual
+ */
+export const getSubmissionDetailService = async (data) => {
   logger.info({
     getSubmissionDetailService: { "[SUBMISSION_ID]": data.form_id },
   });
