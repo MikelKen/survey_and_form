@@ -7,6 +7,7 @@ import {
   deleteQuestionController,
 } from "../controllers/question_controller.js";
 import { validateRequestMiddleware } from "../middleware/validate_middleware.js";
+import { authMiddleware } from "../middleware/auth_middleware.js";
 
 const { Router } = ultimateExpress;
 
@@ -15,6 +16,7 @@ const router = Router();
 // Crear una nueva pregunta en un formulario
 router.post(
   "/questions",
+  authMiddleware,
   validateRequestMiddleware.createQuestion(),
   createQuestionController,
 );
@@ -36,6 +38,7 @@ router.get(
 // Actualizar una pregunta
 router.put(
   "/questions/:id",
+  authMiddleware,
   validateRequestMiddleware.updateQuestion(),
   updateQuestionController,
 );
@@ -43,6 +46,7 @@ router.put(
 // Eliminar una pregunta (
 router.delete(
   "/questions/:id",
+  authMiddleware,
   validateRequestMiddleware.deleteQuestion(),
   deleteQuestionController,
 );

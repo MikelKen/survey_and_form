@@ -1,12 +1,6 @@
 import { logger } from "@tigo/logger";
 import { errorCodes, setError } from "../utils/errorCodes.js";
 import {
-  createQuestionSchema,
-  updateQuestionSchema,
-  questionIdParamSchema,
-  listQuestionsParamSchema,
-} from "../schemas/question_schema.js";
-import {
   insertQuestion,
   selectQuestionById,
   selectQuestionsByFormId,
@@ -14,30 +8,12 @@ import {
   deleteQuestion,
 } from "../repositories/question_repository.js";
 import { selectFormById } from "../repositories/form_repository.js";
-
-/**
- * Parsea y valida un payload contra un esquema Zod
- */
-const parseOrThrow = (schema, payload) => {
-  const result = schema.safeParse(payload);
-
-  if (!result.success) {
-    const details = result.error.issues
-      .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
-      .join(" | ");
-    throw setError(`Payload invalido: ${details}`, errorCodes.VALIDATION);
-  }
-
-  return result.data;
-};
+import { deleteKey } from "@tigo/redis-connector";
 
 /**
  * Agrega una nueva pregunta a un formulario
- * Regla: El formulario debe existir y estar en estado DRAFT
  */
-export const createQuestionService = async (payload) => {
-  const data = parseOrThrow(createQuestionSchema, payload);
-
+export const createQuestionService = async (data) => {
   logger.info({
     createQuestionService: { "[FORM_ID]": data.form_id, "[TYPE]": data.type },
   });
@@ -66,6 +42,14 @@ export const createQuestionService = async (payload) => {
       required: data.required,
       orderIndex: data.order_index,
     });
+
+    // Invalidar cache en Redis
+    try {
+      await deleteKey(`form:${data.form_id}:schema`);
+    } catch (err) {
+      logger.error({ "[REDIS DELETE ERROR]": err.message });
+    }
+
     return newQuestion;
   } catch (err) {
     logger.error({ createQuestionService: { error: err.message } });
@@ -76,9 +60,7 @@ export const createQuestionService = async (payload) => {
 /**
  * Obtiene una pregunta por su ID
  */
-export const getQuestionByIdService = async (payload) => {
-  const data = parseOrThrow(questionIdParamSchema, payload);
-
+export const getQuestionByIdService = async (data) => {
   logger.info({ getQuestionByIdService: { "[QUESTION_ID]": data.id } });
 
   const question = await selectQuestionById(data.id);
@@ -92,12 +74,9 @@ export const getQuestionByIdService = async (payload) => {
 /**
  * Lista todas las preguntas asociadas a un formulario
  */
-export const getQuestionsByFormService = async (payload) => {
-  const data = parseOrThrow(listQuestionsParamSchema, payload);
-
+export const getQuestionsByFormService = async (data) => {
   logger.info({ getQuestionsByFormService: { "[FORM_ID]": data.form_id } });
 
-  // Verificar que el formulario exista
   const form = await selectFormById(data.form_id);
   if (!form) {
     throw setError(
@@ -111,20 +90,15 @@ export const getQuestionsByFormService = async (payload) => {
 
 /**
  * Actualiza una pregunta existente
- * Regla: El formulario asociado debe seguir en estado DRAFT
  */
-export const updateQuestionService = async (payload) => {
-  const data = parseOrThrow(updateQuestionSchema, payload);
-
+export const updateQuestionService = async (data) => {
   logger.info({ updateQuestionService: { "[QUESTION_ID]": data.id } });
 
-  // 1. Verificar existencia de la pregunta
   const existingQuestion = await selectQuestionById(data.id);
   if (!existingQuestion) {
     throw setError(`Pregunta ${data.id} no encontrada`, errorCodes.NOT_FOUND);
   }
 
-  // 2. Verificar estado del formulario padre
   const form = await selectFormById(existingQuestion.form_id);
   if (form?.state !== "DRAFT") {
     throw setError(
@@ -133,7 +107,6 @@ export const updateQuestionService = async (payload) => {
     );
   }
 
-  // 3. Preparar valores (mantener los previos si no se envian)
   const updatedData = {
     questionText: data.question_text
       ? data.question_text.trim()
@@ -144,25 +117,27 @@ export const updateQuestionService = async (payload) => {
   };
 
   const updatedQuestion = await updateQuestion(data.id, updatedData);
+
+  try {
+    await deleteKey(`form:${existingQuestion.form_id}:schema`);
+  } catch (err) {
+    logger.error({ "[REDIS DELETE ERROR]": err.message });
+  }
+
   return updatedQuestion;
 };
 
 /**
  * Elimina una pregunta por su ID
- * Regla: El formulario asociado debe seguir en estado DRAFT
  */
-export const deleteQuestionService = async (payload) => {
-  const data = parseOrThrow(questionIdParamSchema, payload);
-
+export const deleteQuestionService = async (data) => {
   logger.info({ deleteQuestionService: { "[QUESTION_ID]": data.id } });
 
-  // 1. Verificar existencia de la pregunta
   const existingQuestion = await selectQuestionById(data.id);
   if (!existingQuestion) {
     throw setError(`Pregunta ${data.id} no encontrada`, errorCodes.NOT_FOUND);
   }
 
-  // 2. Verificar estado del formulario padre
   const form = await selectFormById(existingQuestion.form_id);
   if (form?.state !== "DRAFT") {
     throw setError(
@@ -172,5 +147,12 @@ export const deleteQuestionService = async (payload) => {
   }
 
   const result = await deleteQuestion(data.id);
+
+  try {
+    await deleteKey(`form:${existingQuestion.form_id}:schema`);
+  } catch (err) {
+    logger.error({ "[REDIS DELETE ERROR]": err.message });
+  }
+
   return { id: result.id, message: "Pregunta eliminada correctamente" };
 };

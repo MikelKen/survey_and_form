@@ -9,7 +9,7 @@ import {
 } from "../services/question_service.js";
 
 /**
- * Controlador para crear una pregunta asociada a un formulario
+ * Controlador para crear una pregunta
  */
 export async function createQuestionController(req, res) {
   let responseBody = {};
@@ -29,7 +29,7 @@ export async function createQuestionController(req, res) {
 }
 
 /**
- * Controlador para obtener una pregunta por su ID
+ * Controlador para consultar una pregunta por ID
  */
 export async function getQuestionByIdController(req, res) {
   let responseBody = {};
@@ -49,7 +49,7 @@ export async function getQuestionByIdController(req, res) {
 }
 
 /**
- * Controlador para obtener todas las preguntas de un formulario
+ * Controlador para listar preguntas de un formulario
  */
 export async function getQuestionsByFormController(req, res) {
   let responseBody = {};
@@ -69,7 +69,7 @@ export async function getQuestionsByFormController(req, res) {
 }
 
 /**
- * Controlador para actualizar una preg
+ * Controlador para actualizar una pregunta
  */
 export async function updateQuestionController(req, res) {
   let responseBody = {};

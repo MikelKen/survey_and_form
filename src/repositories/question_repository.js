@@ -1,14 +1,9 @@
 import { executeQuery } from "@tigo/postgres-connector";
 
-/**
- * Capa de acceso a datos del recurso Questions (Preguntas)
- */
-
 const TABLE_NAME = "questions";
-
 const PUBLIC_COLUMNS = `id, form_id, question_text, type, required, order_index`;
 
-// Funcion para agregar una pregunta a un formulario
+// Agregar pregunta
 export const insertQuestion = async ({
   formId,
   questionText,
@@ -31,7 +26,7 @@ export const insertQuestion = async ({
   return rows[0];
 };
 
-// Funcion para traer una pregunta puntual (util para editar o borrar)
+// Seleccionar pregunta por ID
 export const selectQuestionById = async (id) => {
   const query = `
     SELECT ${PUBLIC_COLUMNS} FROM ${TABLE_NAME} WHERE id = $1;
@@ -40,7 +35,7 @@ export const selectQuestionById = async (id) => {
   return rows[0];
 };
 
-// Funcion para obtener todas las preguntas asociadas a un formulario (ordenadas)
+// Seleccionar todas las preguntas de un formulario ordenadas
 export const selectQuestionsByFormId = async (formId) => {
   const query = `
     SELECT ${PUBLIC_COLUMNS}
@@ -51,16 +46,16 @@ export const selectQuestionsByFormId = async (formId) => {
   return await executeQuery(query, [formId]);
 };
 
-// Funcion para contar preguntas de un formulario.
+// Contar preguntas de un formulario
 export const countQuestionsByFormId = async (formId) => {
   const query = `
     SELECT COUNT(*) AS total FROM ${TABLE_NAME} WHERE form_id = $1;
   `;
   const rows = await executeQuery(query, [formId]);
-  return Number(rows[0].total);
+  return Number(rows[0]?.total || 0);
 };
 
-// Funcion para editar una pregunta (solo debe permitirse si el form sigue en DRAFT,
+// Editar pregunta
 export const updateQuestion = async (
   id,
   { questionText, type, required, orderIndex },
@@ -84,7 +79,7 @@ export const updateQuestion = async (
   return rows[0];
 };
 
-// Funcion para eliminar una pregunta
+// Eliminar pregunta
 export const deleteQuestion = async (id) => {
   const query = `
     DELETE FROM ${TABLE_NAME} WHERE id = $1

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-// 1. Mockear el conector de Postgres
+// 1. Mockear el conector de Postgres corporativo
 vi.mock("@tigo/postgres-connector", () => ({
   executeQuery: vi.fn(),
 }));
@@ -20,11 +20,9 @@ describe("Question Repository - Unit Tests", () => {
     vi.clearAllMocks();
   });
 
-  // ----------------------------------------------------------------------
-  // insertQuestion
-  // ----------------------------------------------------------------------
+  // 1. insertQuestion
   describe("insertQuestion", () => {
-    it("debe insertar una pregunta con valores proporcionados y valores por defecto", async () => {
+    it("debe insertar una pregunta usando valores por defecto para required (false) y orderIndex (1)", async () => {
       const mockQuestion = {
         id: "q101",
         form_id: "f101",
@@ -82,9 +80,7 @@ describe("Question Repository - Unit Tests", () => {
     });
   });
 
-  // ----------------------------------------------------------------------
-  // selectQuestionById
-  // ----------------------------------------------------------------------
+  // 2. selectQuestionById
   describe("selectQuestionById", () => {
     it("debe seleccionar una pregunta por su ID", async () => {
       const mockQuestion = { id: "q101", question_text: "¿Tienes mascota?" };
@@ -108,9 +104,7 @@ describe("Question Repository - Unit Tests", () => {
     });
   });
 
-  // ----------------------------------------------------------------------
-  // selectQuestionsByFormId
-  // ----------------------------------------------------------------------
+  // 3. selectQuestionsByFormId
   describe("selectQuestionsByFormId", () => {
     it("debe retornar la lista de preguntas ordenadas por order_index ASC", async () => {
       const mockQuestions = [
@@ -129,9 +123,7 @@ describe("Question Repository - Unit Tests", () => {
     });
   });
 
-  // ----------------------------------------------------------------------
-  // countQuestionsByFormId
-  // ----------------------------------------------------------------------
+  // 4. countQuestionsByFormId
   describe("countQuestionsByFormId", () => {
     it("debe retornar el total de preguntas como un número", async () => {
       executeQuery.mockResolvedValue([{ total: "3" }]);
@@ -144,11 +136,17 @@ describe("Question Repository - Unit Tests", () => {
       );
       expect(total).toBe(3);
     });
+
+    it("debe retornar 0 si el formulario no tiene preguntas registradas", async () => {
+      executeQuery.mockResolvedValue([{ total: "0" }]);
+
+      const total = await countQuestionsByFormId("f101");
+
+      expect(total).toBe(0);
+    });
   });
 
-  // ----------------------------------------------------------------------
-  // updateQuestion
-  // ----------------------------------------------------------------------
+  // 5. updateQuestion
   describe("updateQuestion", () => {
     it("debe actualizar los campos de una pregunta por su ID", async () => {
       const mockUpdated = {
@@ -178,11 +176,9 @@ describe("Question Repository - Unit Tests", () => {
     });
   });
 
-  // ----------------------------------------------------------------------
-  // deleteQuestion
-  // ----------------------------------------------------------------------
+  // 6. deleteQuestion
   describe("deleteQuestion", () => {
-    it("debe eliminar la pregunta por ID y retornar su id", async () => {
+    it("debe eliminar la pregunta por ID y retornar su id borrado", async () => {
       const mockDeleted = { id: "q101" };
       executeQuery.mockResolvedValue([mockDeleted]);
 
