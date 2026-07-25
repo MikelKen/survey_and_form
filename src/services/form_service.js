@@ -1,12 +1,6 @@
 import { logger } from "@tigo/logger";
 import { errorCodes, setError } from "../utils/errorCodes.js";
 import {
-  createFormSchema,
-  updateFormSchema,
-  publishFormSchema,
-  listFormsFilterSchema,
-} from "../schemas/form_schema.js";
-import {
   insertForm,
   selectFormById,
   selectFormsByCreator,
@@ -14,31 +8,18 @@ import {
   publishForm,
   deleteForm,
 } from "../repositories/form_repository.js";
-import { countQuestionsByFormId } from "../repositories/question_repository.js";
+import {
+  countQuestionsByFormId,
+  selectQuestionsByFormId,
+} from "../repositories/question_repository.js";
+import { getCall, setCall, deleteKey } from "@tigo/redis-connector";
 
-/**
- * Parsea y valida un payload contra un schema de Zod.
- * Lanza un error estructurado si la validacion falla.
- */
-const parseOrThrow = (schema, payload) => {
-  const result = schema.safeParse(payload);
-
-  if (!result.success) {
-    const details = result.error.issues
-      .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
-      .join(" | ");
-    throw setError(`Payload invalido: ${details}`, errorCodes.VALIDATION);
-  }
-
-  return result.data;
-};
+const CACHE_TTL = 300;
 
 /**
  * Crea un nuevo formulario en estado 'DRAFT'.
  */
-export const createFormService = async (creatorId, payload) => {
-  const data = parseOrThrow(createFormSchema, payload);
-
+export const createFormService = async (creatorId, data) => {
   logger.info({
     createFormService: { "[CREATOR_ID]": creatorId, "[TITLE]": data.title },
   });
@@ -56,27 +37,52 @@ export const createFormService = async (creatorId, payload) => {
 };
 
 /**
- * Obtiene un formulario especifico por su ID.
+ * Obtiene un formulario específico por su ID.
  */
-export const getFormById = async (payload) => {
-  const data = parseOrThrow(publishFormSchema, payload);
+export const getFormByIdService = async (data) => {
+  const { id } = data;
+  const cacheKey = `form:${id}:schema`;
 
-  logger.info({ getFormByIdService: { "[FORM_ID]": data.id } });
-
-  const form = await selectFormById(data.id);
-  if (!form) {
-    throw setError(`Formulario ${data.id} no encontrado`, errorCodes.NOT_FOUND);
+  // 1. Intentar obtener desde Redis
+  try {
+    const cachedForm = await getCall(cacheKey);
+    if (cachedForm) {
+      logger.info({ "[REDIS CACHE HIT]": cacheKey });
+      return typeof cachedForm === "string"
+        ? JSON.parse(cachedForm)
+        : cachedForm;
+    }
+  } catch (err) {
+    logger.error({ "[REDIS GET ERROR]": err.message });
   }
 
-  return form;
+  // 2. Consultar en PostgreSQL si no está en caché
+  logger.info({ getFormByIdService: { "[FORM_ID]": id } });
+  const form = await selectFormById(id);
+  if (!form) {
+    throw setError(`Formulario ${id} no encontrado`, errorCodes.NOT_FOUND);
+  }
+
+  // 3. Obtener sus preguntas
+  const questions = await selectQuestionsByFormId(id);
+  const fullForm = { ...form, questions };
+
+  // 4. Si el formulario está publicado, guardar en Redis
+  if (form.state === "PUBLISHED") {
+    try {
+      await setCall(cacheKey, fullForm, CACHE_TTL);
+    } catch (err) {
+      logger.error({ "[REDIS SET ERROR]": err.message });
+    }
+  }
+
+  return fullForm;
 };
 
 /**
- * Lista los formularios creados por un usuario especifico con filtros y paginacion.
+ * Lista los formularios creados por un usuario específico.
  */
-export const listFormsByCreatorService = async (creatorId, rawQuery) => {
-  const data = parseOrThrow(listFormsFilterSchema, rawQuery);
-
+export const listFormsByCreatorService = async (creatorId, data) => {
   logger.info({
     listFormsByCreatorService: {
       "[CREATOR_ID]": creatorId,
@@ -96,21 +102,17 @@ export const listFormsByCreatorService = async (creatorId, rawQuery) => {
 };
 
 /**
- * Actualiza el titulo de un formulario.
- * Solo se permite la edicion si el formulario sigue en estado 'DRAFT'.
+ * Actualiza el título de un formulario.
+ * Solo se permite la edición si el formulario sigue en estado 'DRAFT'.
  */
-export const updateFormService = async (payload) => {
-  const data = parseOrThrow(updateFormSchema, payload);
+export const updateFormService = async (data) => {
+  const { id, title } = data;
+  logger.info({ updateFormService: { "[FORM_ID]": id } });
 
-  logger.info({ updateFormService: { "[FORM_ID]": data.id } });
-
-  // 1. Verificar existencia del formulario
-  const existingForm = await selectFormById(data.id);
+  const existingForm = await selectFormById(id);
   if (!existingForm) {
-    throw setError(`Formulario ${data.id} no encontrado`, errorCodes.NOT_FOUND);
+    throw setError(`Formulario ${id} no encontrado`, errorCodes.NOT_FOUND);
   }
-
-  // 2. Regla de negocio: Un formulario publicado no se puede modificar
   if (existingForm.state !== "DRAFT") {
     throw setError(
       "No se puede modificar un formulario que ya se encuentra publicado",
@@ -118,25 +120,29 @@ export const updateFormService = async (payload) => {
     );
   }
 
-  const updatedForm = await updateForm(data.id, { title: data.title.trim() });
+  const updatedForm = await updateForm(id, { title: title.trim() });
+
+  // Invalidar caché en Redis por seguridad
+  try {
+    await deleteKey(`form:${id}:schema`);
+  } catch (err) {
+    logger.error({ "[REDIS DELETE ERROR]": err.message });
+  }
   return updatedForm;
 };
 
 /**
- * Publica un formulario (Transicion DRAFT -> PUBLISHED).
+ * Publica un formulario (DRAFT -> PUBLISHED).
  */
-export const publishFormService = async (payload) => {
-  const data = parseOrThrow(publishFormSchema, payload);
+export const publishFormService = async (data) => {
+  const { id } = data;
+  logger.info({ publishFormService: { "[FORM_ID]": id } });
 
-  logger.info({ publishFormService: { "[FORM_ID]": data.id } });
-
-  // 1. Verificar existencia
-  const existingForm = await selectFormById(data.id);
+  const existingForm = await selectFormById(id);
   if (!existingForm) {
-    throw setError(`Formulario ${data.id} no encontrado`, errorCodes.NOT_FOUND);
+    throw setError(`Formulario ${id} no encontrado`, errorCodes.NOT_FOUND);
   }
 
-  // 2. Validar que no este publicado previamente
   if (existingForm.state === "PUBLISHED") {
     throw setError(
       "El formulario ya se encuentra publicado",
@@ -144,8 +150,7 @@ export const publishFormService = async (payload) => {
     );
   }
 
-  // 3. Regla de negocio RF-27.2: Debe tener al menos una pregunta para publicarse
-  const totalQuestions = await countQuestionsByFormId(data.id);
+  const totalQuestions = await countQuestionsByFormId(id);
   if (totalQuestions === 0) {
     throw setError(
       "El formulario requiere al menos una pregunta para poder ser publicado",
@@ -153,24 +158,38 @@ export const publishFormService = async (payload) => {
     );
   }
 
-  // 4. Cambiar estado a PUBLISHED
-  const publishedForm = await publishForm(data.id);
+  const publishedForm = await publishForm(id);
+
+  // Limpiar cualquier residuo de caché
+  try {
+    await deleteKey(`form:${id}:schema`);
+  } catch (err) {
+    logger.error({ "[REDIS DELETE ERROR]": err.message });
+  }
   return publishedForm;
 };
 
 /**
  * Elimina un formulario por su ID.
  */
-export const deleteFormService = async (payload) => {
-  const data = parseOrThrow(publishFormSchema, payload);
+export const deleteFormService = async (data) => {
+  const { id } = data;
 
-  logger.info({ deleteFormService: { "[FORM_ID]": data.id } });
+  logger.info({ deleteFormService: { "[FORM_ID]": id } });
 
-  const existingForm = await selectFormById(data.id);
+  const existingForm = await selectFormById(id);
   if (!existingForm) {
-    throw setError(`Formulario ${data.id} no encontrado`, errorCodes.NOT_FOUND);
+    throw setError(`Formulario ${id} no encontrado`, errorCodes.NOT_FOUND);
   }
 
-  const result = await deleteForm(data.id);
+  const result = await deleteForm(id);
+
+  // Limpiar caché
+  try {
+    await deleteKey(`form:${id}:schema`);
+  } catch (err) {
+    logger.error({ "[REDIS DELETE ERROR]": err.message });
+  }
+
   return { id: result.id, message: "Formulario eliminado correctamente" };
 };

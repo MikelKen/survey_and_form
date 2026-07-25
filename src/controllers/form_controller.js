@@ -2,7 +2,7 @@ import { logger } from "@tigo/logger";
 import { sendError } from "../utils/response.js";
 import {
   createFormService,
-  getFormById,
+  getFormByIdService,
   listFormsByCreatorService,
   updateFormService,
   publishFormService,
@@ -10,14 +10,13 @@ import {
 } from "../services/form_service.js";
 
 /**
- * Controlador para crear un nuevo formulario (POST /api/v1/forms)
- * Nota: Extrae el id del creador del usuario autenticado (ej. req.user.id)
+ * Controlador para crear un nuevo formulario
  */
 export async function createFormController(req, res) {
   let responseBody = {};
   logger.startTimer("ExecutionTimeAll");
   try {
-    const creatorId = req.validated.xclientid || req.user?.id;
+    const creatorId = req.user.id;
     responseBody = await createFormService(creatorId, req.validated);
     return res.status(201).json(responseBody);
   } catch (error) {
@@ -32,13 +31,13 @@ export async function createFormController(req, res) {
 }
 
 /**
- * Controlador para consultar un formulario por id
+ * Controlador para consultar un formulario por ID
  */
 export async function getFormByIdController(req, res) {
   let responseBody = {};
   logger.startTimer("ExecutionTimeAll");
   try {
-    responseBody = await getFormById(req.validated);
+    responseBody = await getFormByIdService(req.validated);
     return res.status(200).json(responseBody);
   } catch (error) {
     logger.error({ "[ERROR]": error.message, stack: error.stack });
@@ -52,14 +51,17 @@ export async function getFormByIdController(req, res) {
 }
 
 /**
- * Controlador para listar formularios creados por un usuario
+ * Controlador para listar formularios de un creador
  */
 export async function listFormsByCreatorController(req, res) {
   let responseBody = {};
   logger.startTimer("ExecutionTimeAll");
   try {
-    const creatorId = req.validated?.xclientid || req.user?.id;
-    responseBody = await listFormsByCreatorService(creatorId, req.query);
+    const creatorId = req.user?.id || req.validated?.xclientid;
+    responseBody = await listFormsByCreatorService(
+      creatorId,
+      req.validated || req.query,
+    );
     return res.status(200).json(responseBody);
   } catch (error) {
     logger.error({ "[ERROR]": error.message, stack: error.stack });
@@ -73,7 +75,7 @@ export async function listFormsByCreatorController(req, res) {
 }
 
 /**
- * Controlador para actualizar el titulo de un formulario
+ * Controlador para actualizar título de un formulario
  */
 export async function updateFormController(req, res) {
   let responseBody = {};
@@ -93,7 +95,7 @@ export async function updateFormController(req, res) {
 }
 
 /**
- * RF-27.2: Controlador para publicar un formulario
+ * Controlador para publicar un formulario
  */
 export async function publishFormController(req, res) {
   let responseBody = {};

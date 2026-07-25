@@ -40,9 +40,7 @@ describe("Form Repository - Unit Tests", () => {
     vi.clearAllMocks();
   });
 
-  // ----------------------------------------------------------------------
   // insertForm
-  // ----------------------------------------------------------------------
   describe("insertForm", () => {
     it("debe ejecutar el INSERT de un formulario en estado DRAFT", async () => {
       const mockCreatedForm = {
@@ -68,9 +66,7 @@ describe("Form Repository - Unit Tests", () => {
     });
   });
 
-  // ----------------------------------------------------------------------
   // selectFormById
-  // ----------------------------------------------------------------------
   describe("selectFormById", () => {
     it("debe seleccionar un formulario por ID", async () => {
       const mockForm = { id: "f101", title: "Encuesta Clientes" };
@@ -94,9 +90,7 @@ describe("Form Repository - Unit Tests", () => {
     });
   });
 
-  // ----------------------------------------------------------------------
   // selectFormStateById
-  // ----------------------------------------------------------------------
   describe("selectFormStateById", () => {
     it("debe traer únicamente el id y estado de un formulario", async () => {
       const mockState = { id: "f101", state: "PUBLISHED" };
@@ -112,9 +106,7 @@ describe("Form Repository - Unit Tests", () => {
     });
   });
 
-  // ----------------------------------------------------------------------
   // selectFormsByCreator
-  // ----------------------------------------------------------------------
   describe("selectFormsByCreator", () => {
     it("debe obtener los formularios de un creador sin filtros adicionales", async () => {
       const mockRows = [{ id: "f1", title: "Form 1" }];
@@ -161,15 +153,13 @@ describe("Form Repository - Unit Tests", () => {
       expect(countParams).toEqual(["c101", "%Clientes%", "DRAFT"]);
 
       const [dataSql, dataParams] = executeQuery.mock.calls[1];
-      // CAMBIO: Buscamos partes clave de la query para ignorar saltos de línea y espacios
       expect(dataSql).toContain("ORDER BY created_at desc");
       expect(dataSql).toContain("LIMIT $4 OFFSET $5");
       expect(dataParams).toEqual(["c101", "%Clientes%", "DRAFT", 15, 0]);
     });
   });
-  // ----------------------------------------------------------------------
+
   // updateFormTitle
-  // ----------------------------------------------------------------------
   describe("updateFormTitle", () => {
     it("debe actualizar el título del formulario pasándole id y title", async () => {
       const mockUpdated = { id: "f101", title: "Título Nuevo" };
@@ -177,7 +167,6 @@ describe("Form Repository - Unit Tests", () => {
 
       const result = await updateFormTitle("f101", "Título Nuevo");
 
-      // CAMBIO: Se buscan por separado para evitar fallos por saltos de línea
       expect(executeQuery).toHaveBeenCalledWith(
         expect.stringContaining("UPDATE forms"),
         ["f101", "Título Nuevo"],
@@ -186,9 +175,7 @@ describe("Form Repository - Unit Tests", () => {
     });
   });
 
-  // ----------------------------------------------------------------------
   // updateForm
-  // ----------------------------------------------------------------------
   describe("updateForm", () => {
     it("debe actualizar el título asegurando que el estado sea DRAFT", async () => {
       const mockUpdated = { id: "f101", title: "Título Borrador" };
@@ -204,9 +191,7 @@ describe("Form Repository - Unit Tests", () => {
     });
   });
 
-  // ----------------------------------------------------------------------
   // publishForm
-  // ----------------------------------------------------------------------
   describe("publishForm", () => {
     it("debe cambiar el estado a PUBLISHED sólo si está en DRAFT", async () => {
       const mockPublished = { id: "f101", state: "PUBLISHED" };
@@ -222,9 +207,7 @@ describe("Form Repository - Unit Tests", () => {
     });
   });
 
-  // ----------------------------------------------------------------------
   // deleteForm
-  // ----------------------------------------------------------------------
   describe("deleteForm", () => {
     it("debe eliminar el formulario por ID y retornar el id borrado", async () => {
       const mockDeleted = { id: "f101" };
