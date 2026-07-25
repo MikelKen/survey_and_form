@@ -4,12 +4,7 @@ import {
   buildPaginationResponse,
 } from "../utils/pagination.js";
 
-/**
- * Capa de acceso a datos del recurso  Users
- */
-
 const TABLE_NAME = "users";
-
 const PUBLIC_COLUMNS = `id, name, email, role, created_at`;
 
 const ALLOWED_USER_SORT = {
@@ -31,8 +26,7 @@ export const insertUser = async ({ name, email, passwordHash, role }) => {
         ) 
         RETURNING ${PUBLIC_COLUMNS};
     `;
-  // const values = [name, email, passwordHash, role];
-  // return await executeQuery(query, values);
+
   const rows = await executeQuery(query, [name, email, passwordHash, role]);
   return rows[0];
 };
@@ -75,18 +69,23 @@ export const selectAllUsers = async (filters = {}, rawPagination = {}) => {
     values.push(`%${filters.name}%`);
   }
 
+  if (filters.role) {
+    conditions.push(`role = $${idx++}`);
+    values.push(filters.role);
+  }
+
   const whereClause = conditions.length
     ? `WHERE ${conditions.join(" AND ")}`
     : "";
 
-  // Query para contar el total (sin LIMIT/OFFSET, para calcular totalPages)
+  // Query de Total
   const countQuery = `
     SELECT COUNT(*) AS total FROM ${TABLE_NAME} ${whereClause};
   `;
   const countResult = await executeQuery(countQuery, values);
   const total = Number(countResult[0].total);
 
-  // Query para traer solo la página solicitada
+  // Query de Datos Paginados
   const dataValues = [...values, perPage, offset];
   const dataQuery = `
     SELECT ${PUBLIC_COLUMNS}

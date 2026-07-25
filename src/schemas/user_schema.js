@@ -8,7 +8,7 @@ export const createUserSchema = z
   .object({
     name: z.string().min(1).max(150),
     email: z.string().email().min(1).max(150),
-    password: z.string().min(8).max(75),
+    password: z.string().min(8).max(72),
     role: z.enum(ALLOWED_ROLES),
     ...headerSchema,
   })
@@ -19,7 +19,7 @@ export const updateUserSchema = createUserSchema.partial();
 export const listUsersFilterSchema = z
   .object({
     name: z.string().max(150).optional(),
-    roles: z.string().optional(),
+    role: z.string().optional(),
   })
   .merge(paginationSchema)
   .strict();

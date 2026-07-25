@@ -7,6 +7,9 @@ import {
   listUsersService,
 } from "../services/user_service.js";
 
+/**
+ * Controlador para crear un nuevo usuario
+ */
 export async function createUserController(req, res) {
   let responseBody = {};
   logger.startTimer("ExecutionTimeAll");
@@ -24,6 +27,9 @@ export async function createUserController(req, res) {
   }
 }
 
+/**
+ * Controlador para obtener un usuario por ID
+ */
 export async function getUserController(req, res) {
   let responseBody = {};
   logger.startTimer("ExecutionTimeAll");
@@ -41,6 +47,9 @@ export async function getUserController(req, res) {
   }
 }
 
+/**
+ * Controlador para inicio de sesión (Login)
+ */
 export async function loginUserController(req, res) {
   let responseBody = {};
   logger.startTimer("ExecutionTimeAll");
@@ -59,11 +68,13 @@ export async function loginUserController(req, res) {
   }
 }
 
+/**
+ * Controlador para listar usuarios paginados
+ */
 export async function listUsersController(req, res) {
   let responseBody = {};
   logger.startTimer("ExecutionTimeAll");
   try {
-    // CAMBIO: Se usa req.validated para incluir los headers y coerciones de paginación
     responseBody = await listUsersService(req.validated);
     return res.status(200).json(responseBody);
   } catch (error) {

@@ -12,10 +12,10 @@ import {
   selectUserByEmailWithPassword,
   selectAllUsers,
 } from "../../src/repositories/user_repository.js";
-import { generateToken } from "../../src/helpers/jws_token.js";
+import { generateToken } from "../../src/config/jws_token.js";
 
 vi.mock("../../src/repositories/user_repository.js");
-vi.mock("../../src/helpers/jws_token.js");
+vi.mock("../../src/config/jws_token.js");
 vi.mock("bcrypt");
 
 describe("createUserService", () => {
@@ -41,7 +41,7 @@ describe("createUserService", () => {
       role: "creator",
     });
 
-    // Verifica normalizacion (trim + lowercase) antes de persistir
+    // Verifica normalización (trim + lowercase) antes de persistir
     expect(insertUser).toHaveBeenCalledWith({
       name: "Juan Perez",
       email: "juan@test.com",
@@ -52,7 +52,7 @@ describe("createUserService", () => {
     expect(result.email).toBe("juan@test.com");
   });
 
-  it("lanza CONFLICT si el email ya existe (codigo 23505 de postgres)", async () => {
+  it("lanza CONFLICT si el email ya existe (código 23505 de postgres)", async () => {
     bcrypt.hash.mockResolvedValue("hashed_password_123");
     insertUser.mockRejectedValue({ code: "23505" });
 
@@ -66,7 +66,7 @@ describe("createUserService", () => {
     ).rejects.toThrow(/ya esta registrado/);
   });
 
-  it("lanza UNKNOWN si insertUser falla por otra razon", async () => {
+  it("lanza UNKNOWN si insertUser falla por otra razón", async () => {
     bcrypt.hash.mockResolvedValue("hashed_password_123");
     insertUser.mockRejectedValue(new Error("connection timeout"));
 
@@ -83,6 +83,7 @@ describe("createUserService", () => {
 
 describe("getUserService", () => {
   const VALID_UUID = "123e4567-e89b-12d3-a456-426614174000";
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -105,12 +106,6 @@ describe("getUserService", () => {
       /no encontrado/,
     );
   });
-
-  it("lanza VALIDATION si el id no es un uuid valido", async () => {
-    await expect(getUserService({ id: "no-es-un-uuid" })).rejects.toThrow(
-      /Payload invalido/,
-    );
-  });
 });
 
 describe("loginUserService", () => {
@@ -118,7 +113,7 @@ describe("loginUserService", () => {
     vi.clearAllMocks();
   });
 
-  it("retorna el usuario y el token si las credenciales son validas", async () => {
+  it("retorna el usuario y el token si las credenciales son válidas", async () => {
     selectUserByEmailWithPassword.mockResolvedValue({
       id: "u1",
       email: "juan@test.com",
@@ -134,7 +129,7 @@ describe("loginUserService", () => {
     });
 
     expect(result.token).toBe("fake.jwt.token");
-    // Verifica que el password_hash nunca se filtra en la respuesta
+    // Verifica que el password_hash nunca se filtre en la respuesta
     expect(result.password_hash).toBeUndefined();
   });
 
@@ -165,7 +160,7 @@ describe("listUsersService", () => {
     vi.clearAllMocks();
   });
 
-  it("pasa filtros y paginacion correctamente al repository", async () => {
+  it("pasa filtros y paginación correctamente al repository", async () => {
     selectAllUsers.mockResolvedValue({
       data: [{ id: "u1", name: "Juan" }],
       total: 1,
@@ -173,10 +168,14 @@ describe("listUsersService", () => {
       perPage: 10,
     });
 
-    const result = await listUsersService({ name: "Juan", page: "1" });
+    const result = await listUsersService({
+      name: "Juan",
+      role: "creator",
+      page: 1,
+    });
 
     expect(selectAllUsers).toHaveBeenCalledWith(
-      { name: "Juan", roles: undefined },
+      { name: "Juan", role: "creator" },
       expect.objectContaining({ page: 1 }),
     );
     expect(result.data).toHaveLength(1);

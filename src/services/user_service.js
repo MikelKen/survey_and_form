@@ -2,39 +2,17 @@ import bcrypt from "bcrypt";
 import { logger } from "@tigo/logger";
 import { errorCodes, setError } from "../utils/errorCodes.js";
 import {
-  loginUserSchema,
-  listUsersFilterSchema,
-  userIdParamSchema,
-} from "../schemas/user_schema.js";
-import {
   insertUser,
   selectUserByEmailWithPassword,
   selectUserById,
   selectAllUsers,
 } from "../repositories/user_repository.js";
-import { generateToken } from "../helpers/jws_token.js";
+import { generateToken } from "../config/jws_token.js";
 
 const SALT_ROUNDS = 10;
 
 /**
- * Parsea un payload contra un schema de Zod y traduce errores
- * de validacion
- * */
-const parseOrThrow = (schema, payload) => {
-  const result = schema.safeParse(payload);
-
-  if (!result.success) {
-    const details = result.error.issues
-      .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
-      .join(" | ");
-    throw setError(`Payload invalido: ${details}`, errorCodes.VALIDATION);
-  }
-
-  return result.data;
-};
-
-/**
- * Funcion para crear usuario
+ * Servicio para crear usuario
  */
 export const createUserService = async (data) => {
   logger.info({ createUserService: { "[EMAIL]": data.email } });
@@ -55,7 +33,7 @@ export const createUserService = async (data) => {
 
     return {
       ...newUser,
-      token, // <--- Se agrega el token al objeto retornado
+      token,
     };
   } catch (err) {
     if (err.code === "23505") {
@@ -65,11 +43,12 @@ export const createUserService = async (data) => {
     throw setError("No se pudo crear el usuario", errorCodes.UNKNOWN);
   }
 };
+
 /**
  * Busca un usuario por ID
  */
-export const getUserService = async (params) => {
-  const { id } = parseOrThrow(userIdParamSchema, params);
+export const getUserService = async (payload) => {
+  const { id } = payload;
 
   logger.info({ getUserService: { "[ID]": id } });
 
@@ -83,9 +62,7 @@ export const getUserService = async (params) => {
 /**
  * Verifica credenciales del login
  */
-export const loginUserService = async (body) => {
-  const data = parseOrThrow(loginUserSchema, body);
-
+export const loginUserService = async (data) => {
   logger.info({ loginUserService: { "[EMAIL]": data.email } });
 
   const normalizedEmail = data.email.trim().toLowerCase();
@@ -101,28 +78,23 @@ export const loginUserService = async (body) => {
   }
 
   const { password_hash, ...safeUser } = user;
-
-  // Generar token JWT
   const token = generateToken(safeUser);
 
-  // Retornar el usuario limpio junto con su token
   return {
     ...safeUser,
-    token, // <--- Retorna el JWT
+    token,
   };
 };
 
 /**
- * Lista usuarios paginados, validando filtros y paginacion
+ * Lista usuarios paginados
  */
-export const listUsersService = async (rawQuery) => {
-  const data = parseOrThrow(listUsersFilterSchema, rawQuery);
-
+export const listUsersService = async (data) => {
   logger.info({
-    listUsersService: { "[FILTERS]": { name: data.name, roles: data.roles } },
+    listUsersService: { "[FILTERS]": { name: data.name, role: data.role } },
   });
 
-  const filters = { name: data.name, roles: data.roles };
+  const filters = { name: data.name, role: data.role };
   const rawPagination = {
     page: data.page,
     perPage: data.perPage,
