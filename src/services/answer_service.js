@@ -16,6 +16,7 @@ import { selectQuestionsByFormId } from "../repositories/question_repository.js"
 import { getCall, setCall } from "@tigo/redis-connector";
 
 const RESULTS_CACHE_TTL = 60;
+const FORM_SCHEMA_CACHE_TTL = 300;
 
 /**
  * Valida que todas las preguntas requeridas tengan respuesta
@@ -107,26 +108,52 @@ const validateAnswersLogic = (questions, answers) => {
 export const submitAnswersService = async (data) => {
   logger.info({ submitAnswersService: { "[FORM_ID]": data.form_id } });
 
-  const form = await selectFormStateById(data.form_id);
-  if (!form) {
-    throw setError(
-      `Formulario ${data.form_id} no encontrado`,
-      errorCodes.NOT_FOUND,
-    );
+  const cacheKey = `form:${data.form_id}:schema`;
+  let formSchema = null;
+
+  // 1. Buscar estructura y estado del formulario en Redis (RAM)
+  try {
+    const cached = await getCall(cacheKey);
+    if (cached) {
+      formSchema = typeof cached === "string" ? JSON.parse(cached) : cached;
+    }
+  } catch (err) {
+    logger.error({ "[REDIS GET ERROR]": err.message });
   }
 
-  if (form.state !== "PUBLISHED") {
+  // 2. Si no está en caché Redis, consultar a PostgreSQL y cachear
+  if (!formSchema) {
+    const form = await selectFormStateById(data.form_id);
+    if (!form) {
+      throw setError(
+        `Formulario ${data.form_id} no encontrado`,
+        errorCodes.NOT_FOUND,
+      );
+    }
+
+    const questions = await selectQuestionsByFormId(data.form_id);
+    formSchema = { state: form.state, questions };
+
+    if (form.state === "PUBLISHED") {
+      try {
+        await setCall(cacheKey, formSchema, FORM_SCHEMA_CACHE_TTL);
+      } catch (err) {
+        logger.error({ "[REDIS SET ERROR]": err.message });
+      }
+    }
+  }
+
+  // 3. Validar estado y preguntas utilizando la estructura desde memoria
+  if (formSchema.state !== "PUBLISHED") {
     throw setError(
       "Un formulario en borrador no puede recibir respuestas",
       errorCodes.CONFLICT,
     );
   }
 
-  const questions = await selectQuestionsByFormId(data.form_id);
+  validateAnswersLogic(formSchema.questions, data.answers);
 
-  // Ejecutar validaciones aisladas
-  validateAnswersLogic(questions, data.answers);
-
+  // 4. Persistir la respuesta en PostgreSQL
   try {
     const submission = await insertSubmission(data.form_id);
     const details = await insertAnswerDetailsBulk(submission.id, data.answers);
