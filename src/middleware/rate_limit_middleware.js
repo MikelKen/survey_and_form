@@ -3,7 +3,6 @@ import { logger } from "@tigo/logger";
 
 /**
  * Middleware para controlar la tasa de peticiones (Rate Limit) por x-clientid
- * Límite: 10 respuestas de encuestas por minuto por cliente
  */
 export const answerRateLimiterMiddleware = async (req, res, next) => {
   const clientId = req.headers["x-clientid"] || req.ip;
@@ -29,7 +28,6 @@ export const answerRateLimiterMiddleware = async (req, res, next) => {
     next();
   } catch (error) {
     logger.error({ "[RATE LIMIT ERROR]": error.message });
-    // En caso de fallo en Redis, se permite continuar
     next();
   }
 };

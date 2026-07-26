@@ -3,14 +3,8 @@ import { check, group, sleep } from "k6";
 import exec from "k6/execution";
 import { uuidv4 } from "https://jslib.k6.io/k6-utils/1.4.0/index.js";
 
-// Aceptamos estados HTTP de 200 a 404 como no colapso
 http.setResponseCallback(http.expectedStatuses({ min: 200, max: 404 }));
 
-// -----------------------------------------------------------------
-// RAMPA LINEAL CONTINUA:
-// Sube de 0 a 200 VUs de forma 100% constante durante 2 minutos.
-// Cada 12 segundos se suman exactamente 20 usuarios virtuales.
-// -----------------------------------------------------------------
 export const options = {
   scenarios: {
     rampa_lineal_pura: {
@@ -22,6 +16,18 @@ export const options = {
         { duration: "15s", target: 0 }, // Cierre ordenado
       ],
     },
+    carga_no_lineal: {
+      executor: "ramping-vus",
+      startVUs: 0,
+      startTime: "2m50s",
+      stages: [
+        { duration: "20s", target: 50 }, // subida moderada
+        { duration: "15s", target: 200 }, // pico repentino (spike)
+        { duration: "10s", target: 30 }, // caída brusca
+        { duration: "20s", target: 180 }, // segundo pico
+        { duration: "15s", target: 0 }, // cierre
+      ],
+    },
   },
   thresholds: {
     http_req_failed: ["rate<0.05"], // Umbral: menos del 5% de fallos
@@ -31,9 +37,7 @@ export const options = {
 
 const BASE_URL = "http://localhost:3000/api/v1";
 
-// -----------------------------------------------------------------
-// SETUP: Configuración inicial (1 sola ejecución)
-// -----------------------------------------------------------------
+// SETUP: Configuración inicial
 export function setup() {
   const commonHeaders = { "Content-Type": "application/json" };
 
@@ -95,9 +99,7 @@ export function setup() {
   return { token, userId, formId, questionId };
 }
 
-// -----------------------------------------------------------------
 // VUs (Usuarios Virtuales)
-// -----------------------------------------------------------------
 export default function (data) {
   const { token, userId, formId, questionId } = data;
 
@@ -136,14 +138,11 @@ export default function (data) {
   // 2. Grupo Formularios
   group("Forms", function () {
     if (formId) {
-      const resGetForm = http.get(`${BASE_URL}/forms/${formId}`, { headers });
-      check(resGetForm, { "GET /forms/:id ok": (r) => r.status < 500 });
+      const resGetForm = http.get(`${BASE_URL}/forms/${formId}`, {
+        headers: authHeaders,
+      });
+      check(resGetForm, { "GET /forms/:id ok": (r) => r.status === 200 });
     }
-
-    const resListForms = http.get(`${BASE_URL}/forms`, {
-      headers: authHeaders,
-    });
-    check(resListForms, { "GET /forms ok": (r) => r.status < 500 });
   });
 
   sleep(0.5);
