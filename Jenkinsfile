@@ -60,11 +60,9 @@ pipeline {
                 script {
                     echo "Ejecutando escaneo de vulnerabilidades con Trivy a ${IMAGE_NAME}..."
                     
-                    // 1. Escaneo en consola (resumen visual)
                     sh "trivy image --severity HIGH,CRITICAL ${IMAGE_NAME}"
-
-                    // 2. Generar reporte JSON guardado en el workspace
                     sh "trivy image --format json --output trivy-report.json ${IMAGE_NAME}"
+                    sh "trivy image --format table --output trivy-report.txt ${IMAGE_NAME}"
                 }
             }
         }
@@ -115,7 +113,7 @@ pipeline {
     
     post {
         always {
-            archiveArtifacts artifacts: 'trivy-report.json', allowEmptyArchive: true
+            archiveArtifacts artifacts: 'trivy-report.json, trivy-report.txt', allowEmptyArchive: true
         }
     }
 }
