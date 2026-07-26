@@ -36,7 +36,11 @@ export const createUserService = async (data) => {
       token,
     };
   } catch (err) {
-    if (err.code === "23505") {
+    if (
+      err.code === "23505" ||
+      err.message?.includes("23505") ||
+      err.message?.includes("duplicate key")
+    ) {
       throw setError("El email ya esta registrado", errorCodes.CONFLICT);
     }
     logger.error({ createUserService: { error: err.message } });
