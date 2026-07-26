@@ -1,7 +1,5 @@
-import { getValue, setValue, setCall } from "@tigo/redis-connector";
+import { getValue, setValue } from "@tigo/redis-connector";
 import { logger } from "@tigo/logger";
-import { sendError } from "../utils/response.js";
-import constants from "../utils/constants.js";
 
 /**
  * Middleware para controlar la tasa de peticiones (Rate Limit) por x-clientid
@@ -17,9 +15,7 @@ export const answerRateLimiterMiddleware = async (req, res, next) => {
 
     if (count >= 10) {
       logger.info({ "[RATE LIMIT EXCEEDED]": clientId });
-      const { statusHttp, response } = sendError(
-        constants.errors.TOO_MANY_REQUESTS || "BR002",
-      );
+
       return res.status(429).json({
         error: {
           code: "TOO_MANY_REQUESTS",

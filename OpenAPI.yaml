@@ -1,0 +1,691 @@
+openapi: 3.0.3
+info:
+  title: Survey & Form API
+  version: 1.0.0
+  description: |
+    API para crear, publicar y responder formularios (encuestas). Basada en los endpoints bajo `/api/v1`.
+servers:
+  - url: http://localhost:3000
+    description: Local development
+
+security:
+  - bearerAuth: []
+
+paths:
+  /api/v1/users:
+    post:
+      summary: Crear usuario
+      tags: [Users]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
+      responses:
+        '201':
+          description: Usuario creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+    get:
+      summary: Listar usuarios (filtros y paginación)
+      tags: [Users]
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: perPage
+          in: query
+          schema:
+            type: integer
+        - name: name
+          in: query
+          schema:
+            type: string
+        - name: role
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Lista de usuarios
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/User'
+                  meta:
+                    $ref: '#/components/schemas/Pagination'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/users/login:
+    post:
+      summary: Login de usuario
+      tags: [Users]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserLogin'
+      responses:
+        '200':
+          description: Token y usuario
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/forms:
+    post:
+      summary: Crear formulario
+      tags: [Forms]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FormCreate'
+      responses:
+        '201':
+          description: Formulario creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Form'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    get:
+      summary: Listar formularios del creador autenticado
+      tags: [Forms]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: perPage
+          in: query
+          schema:
+            type: integer
+        - name: state
+          in: query
+          schema:
+            type: string
+        - name: title
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Lista de formularios
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Form'
+                  meta:
+                    $ref: '#/components/schemas/Pagination'
+
+  /api/v1/forms/{id}:
+    get:
+      summary: Obtener formulario por id
+      tags: [Forms]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Formulario
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Form'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      summary: Actualizar formulario
+      tags: [Forms]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FormUpdate'
+      responses:
+        '200':
+          description: Formulario actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Form'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    delete:
+      summary: Eliminar formulario
+      tags: [Forms]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Eliminado
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/forms/{id}/publish:
+    post:
+      summary: Publicar formulario
+      tags: [Forms]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Formulario publicado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Form'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/questions:
+    post:
+      summary: Crear pregunta
+      tags: [Questions]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuestionCreate'
+      responses:
+        '201':
+          description: Pregunta creada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Question'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/forms/{form_id}/questions:
+    get:
+      summary: Listar preguntas de un formulario
+      tags: [Questions]
+      parameters:
+        - name: form_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Lista de preguntas
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Question'
+
+  /api/v1/questions/{id}:
+    get:
+      summary: Obtener pregunta por id
+      tags: [Questions]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Pregunta
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Question'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      summary: Actualizar pregunta
+      tags: [Questions]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuestionUpdate'
+      responses:
+        '200':
+          description: Pregunta actualizada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Question'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    delete:
+      summary: Eliminar pregunta
+      tags: [Questions]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Eliminada
+
+  /api/v1/forms/{form_id}/responses:
+    post:
+      summary: Enviar respuestas (público, rate-limited)
+      tags: [Responses]
+      parameters:
+        - name: form_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitAnswers'
+      responses:
+        '201':
+          description: Envío registrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Submission'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /api/v1/forms/{form_id}/results:
+    get:
+      summary: Obtener resultados agregados por pregunta (auth)
+      tags: [Responses]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: form_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Resultados agregados
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+
+  /api/v1/forms/{form_id}/submissions:
+    get:
+      summary: Listar envíos de un formulario (auth)
+      tags: [Responses]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: form_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: perPage
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Lista de envíos
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Submission'
+                  meta:
+                    $ref: '#/components/schemas/Pagination'
+
+  /api/v1/submissions/{form_id}:
+    get:
+      summary: Detalle de un envío específico (auth)
+      tags: [Responses]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: form_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Detalle de envío
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Submission'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    UserCreate:
+      type: object
+      required: [name, email, password]
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+        role:
+          type: string
+          description: Role del usuario (ej: creator)
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    UserLogin:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
+    AuthResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        user:
+          $ref: '#/components/schemas/User'
+
+    FormCreate:
+      type: object
+      required: [title]
+      properties:
+        title:
+          type: string
+
+    FormUpdate:
+      type: object
+      required: [title]
+      properties:
+        title:
+          type: string
+
+    Form:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        creator_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        state:
+          type: string
+          enum: [DRAFT, PUBLISHED]
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    QuestionCreate:
+      type: object
+      required: [form_id, question_text, type]
+      properties:
+        form_id:
+          type: string
+          format: uuid
+        question_text:
+          type: string
+        type:
+          type: string
+          enum: [TEXT, NUMBER, BOOLEAN]
+        required:
+          type: boolean
+        order_index:
+          type: integer
+
+    QuestionUpdate:
+      type: object
+      properties:
+        question_text:
+          type: string
+        type:
+          type: string
+          enum: [TEXT, NUMBER, BOOLEAN]
+        required:
+          type: boolean
+        order_index:
+          type: integer
+
+    Question:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        form_id:
+          type: string
+          format: uuid
+        question_text:
+          type: string
+        type:
+          type: string
+        required:
+          type: boolean
+        order_index:
+          type: integer
+
+    AnswerItem:
+      type: object
+      required: [questionId, value]
+      properties:
+        questionId:
+          type: string
+          format: uuid
+        value:
+          oneOf:
+            - type: string
+            - type: number
+            - type: boolean
+
+    SubmitAnswers:
+      type: object
+      required: [form_id, answers]
+      properties:
+        form_id:
+          type: string
+          format: uuid
+        answers:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnswerItem'
+
+    Submission:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        form_id:
+          type: string
+          format: uuid
+        sent_at:
+          type: string
+          format: date-time
+        details:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnswerDetail'
+
+    AnswerDetail:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        submission_id:
+          type: string
+          format: uuid
+        question_id:
+          type: string
+          format: uuid
+        value:
+          type: string
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        perPage:
+          type: integer
+        total:
+          type: integer
+
+  responses:
+    BadRequest:
+      description: Solicitud inválida
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: No autorizado
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: No encontrado
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    TooManyRequests:
+      description: Límite de peticiones alcanzado
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string

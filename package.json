@@ -33,6 +33,10 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@sonar/scan": "^5.0.0"
+    "@eslint/js": "^10.0.1",
+    "@sonar/scan": "^5.0.0",
+    "eslint": "^10.8.0",
+    "eslint-formatter-html": "^2.7.3",
+    "globals": "^17.7.0"
   }
 }

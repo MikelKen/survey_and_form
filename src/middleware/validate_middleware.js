@@ -44,7 +44,7 @@ const validate = (schema) => (req, res, next) => {
     };
 
     const data = Object.fromEntries(
-      Object.entries(rawData).filter(([_, value]) => value !== undefined),
+      Object.entries(rawData).filter(([, value]) => value !== undefined),
     );
     const result = schema.safeParse(data);
     if (!result.success) {

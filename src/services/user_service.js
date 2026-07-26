@@ -81,7 +81,8 @@ export const loginUserService = async (data) => {
     throw setError("Credenciales invalidas", errorCodes.VALIDATION);
   }
 
-  const { password_hash, ...safeUser } = user;
+  const safeUser = { ...user };
+  delete safeUser.password_hash;
   const token = generateToken(safeUser);
 
   return {

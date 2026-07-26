@@ -92,7 +92,7 @@ export const selectAllUsers = async (filters = {}, rawPagination = {}) => {
     FROM ${TABLE_NAME}
     ${whereClause}
     ORDER BY ${sort} ${order}
-    LIMIT $${idx++} OFFSET $${idx++};
+    LIMIT $${idx++} OFFSET $${idx + 1};
   `;
   const rows = await executeQuery(dataQuery, dataValues);
 

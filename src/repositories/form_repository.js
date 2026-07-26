@@ -74,8 +74,9 @@ export const selectFormsByCreator = async (
   }
 
   if (filters.state) {
-    conditions.push(`state = $${idx++}`);
+    conditions.push(`state = $${idx}`);
     values.push(filters.state);
+    idx + 1;
   }
 
   const whereClause = `WHERE ${conditions.join(" AND ")}`;
@@ -92,7 +93,7 @@ export const selectFormsByCreator = async (
     FROM ${TABLE_NAME}
     ${whereClause}
     ORDER BY ${sort} ${order}
-    LIMIT $${idx++} OFFSET $${idx++};
+    LIMIT $4 OFFSET $5;
   `;
   const rows = await executeQuery(dataQuery, dataValues);
 

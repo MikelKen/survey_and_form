@@ -10,7 +10,8 @@ export default defineConfig({
     exclude: ["**/node_modules/**", "**/tigo/**"],
     coverage: {
       provider: "v8",
-      reporter: ["text", "lcov"],
+      reporter: ["text", "lcov", "html"],
+      reportsDirectory: "./coverage",
       exclude: [
         "index.js",
         "src/**/*.routes.js",
