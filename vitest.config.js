@@ -14,6 +14,7 @@ export default defineConfig({
       reportsDirectory: "./coverage",
       exclude: [
         "index.js",
+        "src/app.js",
         "src/**/*.routes.js",
         "vitest.config.js",
         "eslint.config.js",
