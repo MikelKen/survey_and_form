@@ -76,7 +76,6 @@ export const selectFormsByCreator = async (
   if (filters.state) {
     conditions.push(`state = $${idx}`);
     values.push(filters.state);
-    idx + 1;
   }
 
   const whereClause = `WHERE ${conditions.join(" AND ")}`;

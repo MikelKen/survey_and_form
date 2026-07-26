@@ -8,7 +8,7 @@ export const authMiddleware = (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
 
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    if (!authHeader?.startsWith("Bearer ")) {
       logger.info("[AUTH] Token no proporcionado o formato incorrecto");
       const { statusHttp, response } = sendError(
         constants.errors.UNAUTHORIZED || "401",

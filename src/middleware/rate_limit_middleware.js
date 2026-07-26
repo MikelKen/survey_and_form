@@ -11,7 +11,7 @@ export const answerRateLimiterMiddleware = async (req, res, next) => {
 
   try {
     const currentRequests = await getValue(redisKey);
-    const count = currentRequests ? parseInt(currentRequests, 10) : 0;
+    const count = currentRequests ? Number.parseInt(currentRequests, 10) : 0;
 
     if (count >= 10) {
       logger.info({ "[RATE LIMIT EXCEEDED]": clientId });
